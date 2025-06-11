@@ -39,7 +39,6 @@ export default function ChatApp() {
             <Route path=":id" element={<ChatPage />} />
           </Route>
         </Routes>
-        <ModeToggler />
       </BrowserRouter>
     </TRPCReactProvider>
   );

@@ -1,6 +1,7 @@
 import { LoginForm } from "@/components/auth/login-form";
 import { Lock } from "lucide-react";
 import { AuthLayout } from "@/components/layout/auth-layout";
+import { ModeToggler } from "@/components/mode-toggler";
 
 export default function LoginPage() {
   return (
@@ -13,6 +14,7 @@ export default function LoginPage() {
       footerLinkHref="/signup"
       gradientVariant="login"
     >
+      {/* <ModeToggler /> */}
       <LoginForm />
     </AuthLayout>
   );
