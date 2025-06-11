@@ -21,11 +21,8 @@ import { relations } from "drizzle-orm";
  * Multi-project schema support
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-export const createTable = pgTableCreator(
-  (name) => `t3-chat-cloneathon-app_${name}`
-);
+export const createTable = pgTableCreator((name) => `t3chat_${name}`);
 
-// Enums for better type safety
 export const messageRoleEnum = pgEnum("message_role", [
   "user",
   "assistant",
@@ -60,6 +57,8 @@ export const users = createTable(
     id: uuid("id").primaryKey().defaultRandom(),
     email: varchar("email", { length: 255 }).unique().notNull(),
     name: varchar("name", { length: 255 }),
+    emailVerified: boolean("email_verified").default(false).notNull(),
+    image: varchar("image", { length: 500 }),
     avatarUrl: varchar("avatar_url", { length: 500 }),
     githubId: varchar("github_id", { length: 100 }).unique(),
     googleId: varchar("google_id", { length: 100 }).unique(),
@@ -86,8 +85,10 @@ export const userSessions = createTable(
     userId: uuid("user_id")
       .references(() => users.id, { onDelete: "cascade" })
       .notNull(),
-    sessionToken: varchar("session_token", { length: 255 }).unique().notNull(),
+    token: varchar("token", { length: 255 }).unique().notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    ipAddress: varchar("ip_address", { length: 45 }),
+    userAgent: text("user_agent"),
     deviceInfo: jsonb("device_info").default({}),
     lastActive: timestamp("last_active", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
@@ -95,9 +96,12 @@ export const userSessions = createTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date()
+    ),
   },
   (t) => [
-    index("session_token_idx").on(t.sessionToken),
+    index("session_token_idx").on(t.token),
     index("session_user_idx").on(t.userId),
     index("session_expires_idx").on(t.expiresAt),
     index("session_active_idx").on(t.lastActive),
@@ -139,6 +143,30 @@ export const accounts = createTable(
     index("account_user_idx").on(t.userId),
     index("account_provider_idx").on(t.providerId),
     index("account_provider_account_idx").on(t.providerId, t.accountId),
+  ]
+);
+
+// ================================
+// BETTER AUTH VERIFICATION
+// ================================
+
+export const verification = createTable(
+  "verification",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    identifier: varchar("identifier", { length: 255 }).notNull(),
+    value: varchar("value", { length: 255 }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date()
+    ),
+  },
+  (t) => [
+    index("verification_identifier_idx").on(t.identifier),
+    index("verification_expires_idx").on(t.expiresAt),
   ]
 );
 
@@ -562,6 +590,9 @@ export type NewUserSession = typeof userSessions.$inferInsert;
 
 export type Account = typeof accounts.$inferSelect;
 export type NewAccount = typeof accounts.$inferInsert;
+
+export type Verification = typeof verification.$inferSelect;
+export type NewVerification = typeof verification.$inferInsert;
 
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type NewApiKey = typeof apiKeys.$inferInsert;

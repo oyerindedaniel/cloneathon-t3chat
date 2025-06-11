@@ -9,18 +9,15 @@ import {
 } from "react-router-dom";
 import { TRPCReactProvider } from "@/trpc/react";
 import { ConversationsLayout } from "@/components/layout/conversations-layout";
+import { useAuth } from "@/hooks/use-auth";
 import LoginPage from "@/pages/auth/login-page";
 import SignupPage from "@/pages/auth/signup-page";
 import ConversationsPage from "@/pages/conversations/conversations-page";
 import ChatPage from "@/pages/conversations/chat-page";
+import { ModeToggler } from "./mode-toggler";
 
 function ConversationsWrapper() {
-  // TODO: Replace with your Better Auth user data
-  const user = {
-    name: "Demo User",
-    email: "demo@example.com",
-    image: null,
-  };
+  const { user } = useAuth();
 
   return (
     <ConversationsLayout user={user}>
@@ -42,6 +39,7 @@ export default function ChatApp() {
             <Route path=":id" element={<ChatPage />} />
           </Route>
         </Routes>
+        <ModeToggler />
       </BrowserRouter>
     </TRPCReactProvider>
   );

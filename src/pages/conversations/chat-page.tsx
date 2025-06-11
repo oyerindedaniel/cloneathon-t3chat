@@ -35,18 +35,18 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-full relative">
+    <div className="flex flex-col h-full relative font-sans">
       <div className="auth-surface border-b border-default/50 px-6 py-4 flex-shrink-0 relative">
         <GridCross position="tl" size="sm" opacity={0.15} />
         <GridCross position="tr" size="sm" opacity={0.15} />
 
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-foreground-default">
+            <h1 className="text-lg font-semibold text-foreground-default font-sans">
               {conversation.title}
             </h1>
-            <p className="text-sm text-foreground-muted">
-              AI Assistant • Online
+            <p className="text-sm text-foreground-muted font-sans">
+              AI Assistant • <span className="font-mono">Online</span>
             </p>
           </div>
 
@@ -65,7 +65,7 @@ export default function ChatPage() {
             }`}
           >
             <Avatar className="flex-shrink-0">
-              <AvatarFallback>
+              <AvatarFallback className="font-mono">
                 {message.role === "user" ? "You" : "AI"}
               </AvatarFallback>
             </Avatar>
@@ -85,10 +85,10 @@ export default function ChatPage() {
               />
 
               <div className="relative z-10">
-                <p className="text-foreground-default text-sm leading-relaxed">
+                <p className="text-foreground-default text-sm leading-relaxed font-sans">
                   {message.content}
                 </p>
-                <p className="text-xs text-foreground-muted mt-2">
+                <p className="text-xs text-foreground-muted mt-2 font-mono">
                   {message.timestamp}
                 </p>
               </div>
@@ -98,7 +98,7 @@ export default function ChatPage() {
 
         <div className="flex gap-3">
           <Avatar className="flex-shrink-0">
-            <AvatarFallback>AI</AvatarFallback>
+            <AvatarFallback className="font-mono">AI</AvatarFallback>
           </Avatar>
           <div className="auth-surface p-4 relative">
             <div className="flex space-x-1">
@@ -119,7 +119,7 @@ export default function ChatPage() {
             <div className="auth-surface border border-default/50 rounded-xl p-3 focus-within:border-primary/50 transition-colors">
               <textarea
                 placeholder="Type your message..."
-                className="w-full resize-none bg-transparent text-foreground-default placeholder:text-foreground-muted focus:outline-none min-h-[20px] max-h-32"
+                className="w-full resize-none bg-transparent text-foreground-default placeholder:text-foreground-muted focus:outline-none min-h-[20px] max-h-32 font-sans"
                 rows={1}
               />
 
@@ -133,14 +133,14 @@ export default function ChatPage() {
                   </Button>
                 </div>
 
-                <div className="text-xs text-foreground-muted">
+                <div className="text-xs text-foreground-muted font-mono">
                   Press Enter to send
                 </div>
               </div>
             </div>
           </div>
 
-          <Button size="lg" className="h-12 w-12 p-0 flex-shrink-0">
+          <Button size="lg" className="h-12 w-12 p-0 flex-shrink-0 font-sans">
             <Send className="w-4 h-4" />
           </Button>
         </div>

@@ -41,8 +41,10 @@
 }
 
 @utility auth-glow {
-  box-shadow: 0 0 0 1px var(--color-primary/20),
-    0 4px 16px var(--color-primary/10), 0 8px 32px var(--color-primary/5);
+  box-shadow: 0 0 0 1px
+      color-mix(in oklch, var(--color-primary) 20%, transparent),
+    0 4px 16px color-mix(in oklch, var(--color-primary) 10%, transparent),
+    0 8px 32px color-mix(in oklch, var(--color-primary) 5%, transparent);
 }
 
 @utility subtle-mask {
@@ -108,7 +110,8 @@
   --grid-opacity: 0.03;
   --cross-size: 8px;
   --cross-opacity: 0.4;
-  --auth-surface-glow: 0 0 0 1px var(--color-primary/10);
+  --auth-surface-glow: 0 0 0 1px
+    color-mix(in oklch, var(--color-primary) 15%, transparent);
 
   --grid-line-color-light: oklch(0.8 0 0 / var(--grid-opacity));
   --grid-bg-color-light: var(--surface-primary);
@@ -167,7 +170,8 @@
 
   --grid-opacity: 0.05;
   --cross-opacity: 0.3;
-  --auth-surface-glow: 0 0 0 1px var(--color-primary/15);
+  --auth-surface-glow: 0 0 0 1px
+    color-mix(in oklch, var(--color-primary) 15%, transparent);
 
   --grid-line-color-dark: oklch(0.4 0 0 / var(--grid-opacity));
   --grid-bg-color-dark: var(--surface-primary);
@@ -232,7 +236,6 @@
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-inter: var(--font-inter);
 }
 
 body {
@@ -268,7 +271,7 @@ body {
   background-color: oklch(0.6 0.01 240 / 0.7);
 }
 
-.auth-grid-background {
+@utility auth-grid-background {
   position: relative;
   background-color: var(--surface-primary);
   background-image: radial-gradient(
@@ -277,39 +280,39 @@ body {
     transparent 0
   );
   background-size: var(--grid-size) var(--grid-size);
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      var(--grid-line-color-dark) 1px,
+      transparent 0
+    );
+  }
 }
 
-[data-theme="dark"] .auth-grid-background {
-  background-image: radial-gradient(
-    circle at 1px 1px,
-    var(--grid-line-color-dark) 1px,
-    transparent 0
-  );
-}
-
-.auth-surface {
+@utility auth-surface {
   position: relative;
   background: var(--surface-secondary);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   box-shadow: var(--auth-surface-glow);
   backdrop-filter: blur(8px);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--color-primary) 5%, transparent) 0%,
+      transparent 50%
+    );
+    border-radius: inherit;
+    pointer-events: none;
+  }
 }
 
-.auth-surface::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    135deg,
-    var(--color-primary/5) 0%,
-    transparent 50%
-  );
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-.grid-pattern-background {
+@utility grid-pattern-background {
   --grid-line-color: var(--grid-line-color-light);
   --grid-bg-color: var(--grid-bg-color-light);
   background-color: var(--grid-bg-color);
@@ -317,57 +320,59 @@ body {
     linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
   background-size: var(--grid-size) var(--grid-size);
   position: relative;
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    --grid-line-color: var(--grid-line-color-dark);
+    --grid-bg-color: var(--grid-bg-color-dark);
+  }
 }
 
-[data-theme="dark"] .grid-pattern-background {
-  --grid-line-color: var(--grid-line-color-dark);
-  --grid-bg-color: var(--grid-bg-color-dark);
-}
-
-.grid-cross {
+@utility grid-cross {
   position: absolute;
   width: var(--cross-size);
   height: var(--cross-size);
   z-index: 1;
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    --cross-color: var(--cross-color-light);
+    background-image: linear-gradient(var(--cross-color), var(--cross-color)),
+      linear-gradient(var(--cross-color), var(--cross-color));
+    background-size: 1px 100%, 100% 1px;
+    background-repeat: no-repeat;
+    background-position: center center;
+  }
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    &::before {
+      --cross-color: var(--cross-color-dark);
+    }
+  }
 }
 
-.grid-cross::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  --cross-color: var(--cross-color-light);
-  background-image: linear-gradient(var(--cross-color), var(--cross-color)),
-    linear-gradient(var(--cross-color), var(--cross-color));
-  background-size: 1px 100%, 100% 1px;
-  background-repeat: no-repeat;
-  background-position: center center;
-}
-
-[data-theme="dark"] .grid-cross::before {
-  --cross-color: var(--cross-color-dark);
-}
-
-.auth-cross-tl {
+@utility auth-cross-tl {
   top: 24px;
   left: 24px;
 }
 
-.auth-cross-tr {
+@utility auth-cross-tr {
   top: 24px;
   right: 24px;
 }
 
-.auth-cross-bl {
+@utility auth-cross-bl {
   bottom: 24px;
   left: 24px;
 }
 
-.auth-cross-br {
+@utility auth-cross-br {
   bottom: 24px;
   right: 24px;
 }
 
-.auth-cross-center {
+@utility auth-cross-center {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -395,10 +400,10 @@ body {
   }
 }
 
-.auth-animate-in {
+@utility auth-animate-in {
   animation: fadeInUp 0.5s ease-out;
 }
 
-.auth-scale-in {
+@utility auth-scale-in {
   animation: scaleIn 0.3s ease-out;
 }

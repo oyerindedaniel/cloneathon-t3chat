@@ -20,6 +20,7 @@ import {
   Key,
   ChevronDown,
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 interface TopbarProps {
   user?: {
@@ -30,6 +31,8 @@ interface TopbarProps {
 }
 
 export function Topbar({ user }: TopbarProps) {
+  const { signOut } = useAuth();
+
   const userInitials = user?.name
     ? user.name
         .split(" ")
@@ -37,6 +40,14 @@ export function Topbar({ user }: TopbarProps) {
         .join("")
         .toUpperCase()
     : user?.email.charAt(0).toUpperCase() || "U";
+
+  const handleLogout = async () => {
+    try {
+      await signOut("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   return (
     <div className="auth-surface border-b border-default/50 px-6 py-3 relative">
@@ -139,7 +150,10 @@ export function Topbar({ user }: TopbarProps) {
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem className="gap-2 cursor-pointer text-error hover:text-error">
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer text-error hover:text-error"
+                onClick={handleLogout}
+              >
                 <LogOut className="w-4 h-4" />
                 Sign out
               </DropdownMenuItem>

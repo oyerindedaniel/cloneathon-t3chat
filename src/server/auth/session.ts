@@ -1,13 +1,15 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "./config";
-import type { Session, User } from "@/lib/auth-client";
+
+type BetterAuthResponse = Awaited<ReturnType<typeof auth.api.getSession>>;
+type User = NonNullable<BetterAuthResponse>["user"];
 
 /**
  * Get the current session on the server-side
  * Use this in server components, API routes, and server actions
  */
-export async function getSession(): Promise<Session | null> {
+export async function getSession(): Promise<BetterAuthResponse> {
   try {
     const session = await auth.api.getSession({
       headers: await headers(),
@@ -33,7 +35,10 @@ export async function getCurrentUser(): Promise<User | null> {
  * Require authentication for server components/actions
  * Redirects to login page if not authenticated
  */
-export async function requireAuth(): Promise<{ session: Session; user: User }> {
+export async function requireAuth(): Promise<{
+  session: NonNullable<BetterAuthResponse>;
+  user: User;
+}> {
   const session = await getSession();
 
   if (!session?.user) {
@@ -48,7 +53,7 @@ export async function requireAuth(): Promise<{ session: Session; user: User }> {
  * Useful for pages that work for both authenticated and unauthenticated users
  */
 export async function getOptionalSession(): Promise<{
-  session: Session | null;
+  session: BetterAuthResponse;
   user: User | null;
   isAuthenticated: boolean;
 }> {

@@ -1,9 +1,11 @@
+"use client";
+
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 
 const ChatApp = dynamic(() => import("@/components/chat-app"), {
   ssr: false,
-  loading: () => <AppShellLoading />,
+  // loading: () => <AppShellLoading />,
 });
 
 function AppShellLoading() {
@@ -46,9 +48,5 @@ function AppShellLoading() {
 }
 
 export default function HomePage() {
-  return (
-    <Suspense fallback={<AppShellLoading />}>
-      <ChatApp />
-    </Suspense>
-  );
+  return <ChatApp />;
 }
