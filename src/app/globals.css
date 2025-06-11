@@ -1,26 +1,292 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces (Light Mode) */
+  --surface-primary: oklch(0.98 0 0); /* Pure white */
+  --surface-secondary: oklch(0.95 0 0); /* Light gray */
+  --surface-tertiary: oklch(0.9 0 0); /* Medium gray */
+  --surface-hover: oklch(0.87 0 0); /* Darker gray for hover states */
+
+  /* Text */
+  --foreground-default: oklch(0.2 0 0); /* Dark gray */
+  --foreground-subtle: oklch(0.4 0 0); /* Medium gray */
+  --foreground-muted: oklch(0.6 0 0); /* Light gray */
+  --foreground-on-accent: oklch(1 0 0); /* White text on accent backgrounds */
+
+  /* Borders */
+  --border-default: oklch(0.85 0 0); /* Light gray border */
+  --border-subtle: oklch(0.92 0 0); /* Very light gray border */
+
+  /* Accent (Blue) */
+  --accent-primary: oklch(0.65 0.15 260); /* Base accent color */
+  --accent-primary-hover: oklch(0.6 0.15 260); /* Hover state */
+  --accent-primary-active: oklch(0.55 0.15 260); /* Active state */
+
+  /* Alerts */
+  --alert-success: oklch(0.7 0.2 145); /* Green for success messages */
+  --alert-warning: oklch(0.85 0.25 80); /* Yellow for warnings */
+  --alert-error: oklch(0.6 0.25 25); /* Red for errors */
+  --alert-info: oklch(0.65 0.15 220); /* Blue for info messages */
+
+  /* Chat-specific colors */
+  --chat-user-bg: oklch(0.65 0.15 260); /* User message background */
+  --chat-assistant-bg: oklch(0.92 0.02 240); /* Assistant message background */
+  --chat-system-bg: oklch(0.88 0.05 60); /* System message background */
+  --chat-code-bg: oklch(0.96 0.01 240); /* Code block background */
+  --chat-typing: oklch(0.7 0.12 180); /* Typing indicator */
+  --chat-online: oklch(0.7 0.2 145); /* Online status */
+  --chat-offline: oklch(0.6 0.05 240); /* Offline status */
+  --chat-away: oklch(0.8 0.15 80); /* Away status */
+
+  /* Message states */
+  --message-sending: oklch(0.75 0.1 240); /* Message being sent */
+  --message-sent: oklch(0.7 0.15 145); /* Message sent successfully */
+  --message-failed: oklch(0.6 0.2 25); /* Message failed to send */
+  --message-highlight: oklch(0.9 0.1 60); /* Highlighted/mentioned message */
+
+  /* Syntax highlighting base colors */
+  --syntax-keyword: oklch(0.55 0.15 280); /* Purple for keywords */
+  --syntax-string: oklch(0.6 0.15 145); /* Green for strings */
+  --syntax-number: oklch(0.65 0.15 30); /* Orange for numbers */
+  --syntax-comment: oklch(0.55 0.05 240); /* Gray for comments */
+  --syntax-function: oklch(0.6 0.15 220); /* Blue for functions */
+
+  /* Model provider colors */
+  --provider-openai: oklch(0.45 0.15 160); /* OpenAI brand-ish */
+  --provider-anthropic: oklch(0.6 0.15 30); /* Anthropic brand-ish */
+  --provider-google: oklch(0.6 0.15 240); /* Google brand-ish */
+  --provider-custom: oklch(0.65 0.1 280); /* Custom/BYOK */
+
+  /* Shadows */
+  --shadow-color: oklch(0 0 0 / 0.1); /* Subtle shadow color */
+
+  /* Grid Pattern */
+  --grid-size: 40px;
+  --grid-line-color-light: oklch(0.85 0 0 / 0.1);
+  --grid-bg-color-light: var(--surface-primary);
+
+  /* Cross */
+  --cross-color-light: oklch(0.7 0 0 / 0.3);
+  --cross-size: 10px;
+  --cross-thickness: 1px;
+}
+
+[data-theme="dark"] {
+  /* Surfaces (Dark Mode) */
+  --surface-primary: oklch(0.18 0 0); /* Dark gray */
+  --surface-secondary: oklch(0.24 0 0); /* Medium dark gray */
+  --surface-tertiary: oklch(0.3 0 0); /* Lighter dark gray */
+  --surface-hover: oklch(0.35 0 0); /* Hover state */
+
+  /* Text */
+  --foreground-default: oklch(0.92 0 0); /* Light gray */
+  --foreground-subtle: oklch(0.65 0 0); /* Medium light gray */
+  --foreground-muted: oklch(0.5 0 0); /* Medium gray */
+  --foreground-on-accent: oklch(1 0 0); /* White text on accent backgrounds */
+
+  /* Borders */
+  --border-default: oklch(0.35 0 0); /* Medium dark gray border */
+  --border-subtle: oklch(0.28 0 0); /* Dark gray border */
+
+  /* Accent (Blue) */
+  --accent-primary: oklch(0.65 0.15 260); /* Base accent color */
+  --accent-primary-hover: oklch(0.7 0.15 260); /* Hover state */
+  --accent-primary-active: oklch(0.75 0.15 260); /* Active state */
+
+  /* Alerts */
+  --alert-success: oklch(0.6 0.2 145); /* Green for success messages */
+  --alert-warning: oklch(0.7 0.25 80); /* Yellow for warnings */
+  --alert-error: oklch(0.5 0.25 25); /* Red for errors */
+  --alert-info: oklch(0.6 0.15 220); /* Blue for info messages */
+
+  /* Chat-specific colors (Dark Mode) */
+  --chat-user-bg: oklch(0.6 0.15 260); /* User message background */
+  --chat-assistant-bg: oklch(0.25 0.02 240); /* Assistant message background */
+  --chat-system-bg: oklch(0.22 0.05 60); /* System message background */
+  --chat-code-bg: oklch(0.2 0.01 240); /* Code block background */
+  --chat-typing: oklch(0.6 0.12 180); /* Typing indicator */
+  --chat-online: oklch(0.6 0.2 145); /* Online status */
+  --chat-offline: oklch(0.45 0.05 240); /* Offline status */
+  --chat-away: oklch(0.65 0.15 80); /* Away status */
+
+  /* Message states (Dark Mode) */
+  --message-sending: oklch(0.55 0.1 240); /* Message being sent */
+  --message-sent: oklch(0.6 0.15 145); /* Message sent successfully */
+  --message-failed: oklch(0.5 0.2 25); /* Message failed to send */
+  --message-highlight: oklch(0.35 0.1 60); /* Highlighted/mentioned message */
+
+  /* Syntax highlighting (Dark Mode) */
+  --syntax-keyword: oklch(0.7 0.15 280); /* Purple for keywords */
+  --syntax-string: oklch(0.75 0.15 145); /* Green for strings */
+  --syntax-number: oklch(0.8 0.15 30); /* Orange for numbers */
+  --syntax-comment: oklch(0.5 0.05 240); /* Gray for comments */
+  --syntax-function: oklch(0.75 0.15 220); /* Blue for functions */
+
+  /* Model provider colors (Dark Mode) */
+  --provider-openai: oklch(0.55 0.15 160); /* OpenAI brand-ish */
+  --provider-anthropic: oklch(0.7 0.15 30); /* Anthropic brand-ish */
+  --provider-google: oklch(0.7 0.15 240); /* Google brand-ish */
+  --provider-custom: oklch(0.75 0.1 280); /* Custom/BYOK */
+
+  /* Shadows */
+  --shadow-color: oklch(0 0 0 / 0.3); /* More pronounced shadow color */
+
+  /* Grid Pattern */
+  --grid-line-color-dark: oklch(
+    0.35 0 0 / 0.15
+  ); /* Slightly more visible on dark */
+  --grid-bg-color-dark: var(--surface-primary);
+
+  /* Cross */
+  --cross-color-dark: oklch(0.5 0 0 / 0.4);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--surface-primary);
+  --color-foreground: var(--foreground-default);
+
+  /* Surfaces */
+  --color-surface-primary: var(--surface-primary);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-surface-hover: var(--surface-hover);
+
+  /* Text */
+  --color-foreground-default: var(--foreground-default);
+  --color-foreground-subtle: var(--foreground-subtle);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-on-accent: var(--foreground-on-accent);
+
+  /* Borders */
+  --color-default: var(--border-default);
+  --color-subtle: var(--border-subtle);
+
+  /* Accent / Primary Actions */
+  --color-primary: var(--accent-primary);
+  --color-primary-hover: var(--accent-primary-hover);
+  --color-primary-active: var(--accent-primary-active);
+
+  /* Alerts */
+  --color-success: var(--alert-success);
+  --color-warning: var(--alert-warning);
+  --color-error: var(--alert-error);
+  --color-info: var(--alert-info);
+
+  /* Chat-specific utility classes */
+  --color-chat-user: var(--chat-user-bg);
+  --color-chat-assistant: var(--chat-assistant-bg);
+  --color-chat-system: var(--chat-system-bg);
+  --color-chat-code: var(--chat-code-bg);
+  --color-chat-typing: var(--chat-typing);
+  --color-chat-online: var(--chat-online);
+  --color-chat-offline: var(--chat-offline);
+  --color-chat-away: var(--chat-away);
+
+  /* Message states */
+  --color-message-sending: var(--message-sending);
+  --color-message-sent: var(--message-sent);
+  --color-message-failed: var(--message-failed);
+  --color-message-highlight: var(--message-highlight);
+
+  /* Syntax highlighting */
+  --color-syntax-keyword: var(--syntax-keyword);
+  --color-syntax-string: var(--syntax-string);
+  --color-syntax-number: var(--syntax-number);
+  --color-syntax-comment: var(--syntax-comment);
+  --color-syntax-function: var(--syntax-function);
+
+  /* Model providers */
+  --color-provider-openai: var(--provider-openai);
+  --color-provider-anthropic: var(--provider-anthropic);
+  --color-provider-google: var(--provider-google);
+  --color-provider-custom: var(--provider-custom);
+
+  /* Shadow */
+  --color-shadow: var(--shadow-color);
+
+  /* Base colors */
+  --color-white: oklch(1 0 0);
+  --color-black: oklch(0 0 0);
+
+  /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-inter: var(--font-inter);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--surface-primary);
+  color: var(--foreground-default);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: oklch(0.6 0.01 240 / 0.5);
+  border-radius: 20px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.6 0.01 240 / 0.7);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background-color: oklch(0.6 0.01 240 / 0.5);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background-color: oklch(0.6 0.01 240 / 0.7);
+}
+
+/* --- Custom Background Pattern --- */
+.grid-pattern-background {
+  --grid-line-color: var(--grid-line-color-light);
+  --grid-bg-color: var(--grid-bg-color-light);
+  background-color: var(--grid-bg-color);
+  background-image: linear-gradient(var(--grid-line-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
+  position: relative;
+}
+
+[data-theme="dark"] .grid-pattern-background {
+  --grid-line-color: var(--grid-line-color-dark);
+  --grid-bg-color: var(--grid-bg-color-dark);
+}
+
+/* --- Cross Marker Style --- */
+.grid-cross {
+  position: absolute;
+  width: var(--cross-size);
+  height: var(--cross-size);
+  /* Position using top/left/right/bottom and calc() in the component */
+}
+
+.grid-cross::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  --cross-color: var(--cross-color-light);
+  background-image: linear-gradient(var(--cross-color), var(--cross-color)),
+    /* Vertical line */ linear-gradient(var(--cross-color), var(--cross-color)); /* Horizontal line */
+  background-size: var(--cross-thickness) 100%,
+    /* Vertical line thickness and full height */ 100% var(--cross-thickness); /* Horizontal line full width and thickness */
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+[data-theme="dark"] .grid-cross::before {
+  --cross-color: var(--cross-color-dark);
 }
