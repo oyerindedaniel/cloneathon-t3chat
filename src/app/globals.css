@@ -106,7 +106,7 @@
 
   --shadow-color: oklch(0 0 0 / 0.1);
 
-  --grid-size: 20px;
+  --grid-size: 40px;
   --grid-opacity: 0.03;
   --cross-size: 8px;
   --cross-opacity: 0.4;
@@ -116,6 +116,9 @@
   --grid-line-color-light: oklch(0.8 0 0 / var(--grid-opacity));
   --grid-bg-color-light: var(--surface-primary);
   --cross-color-light: oklch(0.6 0 0 / var(--cross-opacity));
+
+  --topbar-height: 4rem;
+  --search-height: 5.625rem;
 }
 
 [data-theme="dark"] {
@@ -176,6 +179,9 @@
   --grid-line-color-dark: oklch(0.4 0 0 / var(--grid-opacity));
   --grid-bg-color-dark: var(--surface-primary);
   --cross-color-dark: oklch(0.6 0 0 / var(--cross-opacity));
+
+  --topbar-height: 4rem;
+  --search-height: 5.625rem;
 }
 
 @theme inline {
@@ -313,17 +319,21 @@ body {
 }
 
 @utility grid-pattern-background {
-  --grid-line-color: var(--grid-line-color-light);
-  --grid-bg-color: var(--grid-bg-color-light);
-  background-color: var(--grid-bg-color);
-  background-image: linear-gradient(var(--grid-line-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line-color) 1px, transparent 1px);
+  background-color: var(--surface-primary);
+  background-image: linear-gradient(
+      var(--grid-line-color-light) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, var(--grid-line-color-light) 1px, transparent 1px);
   background-size: var(--grid-size) var(--grid-size);
   position: relative;
 
   &:where([data-theme="dark"], [data-theme="dark"] *) {
-    --grid-line-color: var(--grid-line-color-dark);
-    --grid-bg-color: var(--grid-bg-color-dark);
+    background-image: linear-gradient(
+        var(--grid-line-color-dark) 1px,
+        transparent 1px
+      ),
+      linear-gradient(90deg, var(--grid-line-color-dark) 1px, transparent 1px);
   }
 }
 

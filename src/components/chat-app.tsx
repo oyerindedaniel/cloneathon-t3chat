@@ -15,6 +15,9 @@ import SignupPage from "@/pages/auth/signup-page";
 import ConversationsPage from "@/pages/conversations/conversations-page";
 import ChatPage from "@/pages/conversations/chat-page";
 import { ModeToggler } from "./mode-toggler";
+import { ThemeProvider } from "./theme-provider";
+import { ChatProvider } from "@/contexts/chat-context";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 function ConversationsWrapper() {
   const { user } = useAuth();
@@ -30,15 +33,30 @@ export default function ChatApp() {
   return (
     <TRPCReactProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/conversations" replace />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/conversations" element={<ConversationsWrapper />}>
-            <Route index element={<ConversationsPage />} />
-            <Route path=":id" element={<ChatPage />} />
-          </Route>
-        </Routes>
+        <ThemeProvider
+          attribute="data-theme"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TooltipProvider>
+            <ChatProvider>
+              <Routes>
+                <Route
+                  path="/"
+                  element={<Navigate to="/conversations" replace />}
+                />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/conversations" element={<ConversationsWrapper />}>
+                  <Route index element={<ConversationsPage />} />
+                  <Route path=":id" element={<ChatPage />} />
+                </Route>
+              </Routes>
+              {/* <ModeToggler /> */}
+            </ChatProvider>
+          </TooltipProvider>
+        </ThemeProvider>
       </BrowserRouter>
     </TRPCReactProvider>
   );

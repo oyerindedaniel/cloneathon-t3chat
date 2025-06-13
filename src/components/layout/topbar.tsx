@@ -10,7 +10,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { GridCross } from "@/components/ui/grid-cross";
 import {
   Share2,
   Settings,
@@ -18,9 +17,11 @@ import {
   User,
   Palette,
   Key,
-  ChevronDown,
+  Menu,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useSidebar } from "@/components/ui/sidebar";
+import { ModeToggler } from "@/components/mode-toggler";
 
 interface TopbarProps {
   user?: {
@@ -32,6 +33,7 @@ interface TopbarProps {
 
 export function Topbar({ user }: TopbarProps) {
   const { signOut } = useAuth();
+  const { toggleSidebar } = useSidebar();
 
   const userInitials = user?.name
     ? user.name
@@ -50,115 +52,89 @@ export function Topbar({ user }: TopbarProps) {
   };
 
   return (
-    <div className="auth-surface border-b border-default/50 px-6 py-3 relative">
-      <GridCross position="tl" size="sm" opacity={0.2} />
-      <GridCross position="tr" size="sm" opacity={0.2} />
-
+    <div className="border-b border-default/30 bg-surface-primary px-6 py-4 fixed top-0 left-0 md:left-[calc(var(--sidebar-width))] h-[var(--topbar-height)] right-0 z-100 group-data-[state=collapsed]:left-0">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center relative">
-            <span className="text-primary font-bold text-sm">T3</span>
-            <GridCross
-              position="relative"
-              size="sm"
-              opacity={0.2}
-              className="absolute -top-1 -right-1"
-              style={{ transform: "scale(0.4)" }}
-            />
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold text-foreground-default">
-              T3 Chat Cloneathon
-            </h1>
-            <p className="text-xs text-foreground-muted">AI Conversations</p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSidebar}
+            className="w-8 h-8"
+          >
+            <Menu className="w-4 h-4" />
+          </Button>
+
+          <div className="font-mono text-sm uppercase font-semibold">
+            T3 CHAT CLONEATHON
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 bg-surface-primary hover:bg-surface-hover border-default/50"
-          >
+        <div className="flex items-center gap-6">
+          <Button variant="outline" size="sm" className="gap-2 font-sans">
             <Share2 className="w-3 h-3" />
             <span className="hidden sm:inline">Share</span>
           </Button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="flex items-center gap-2 h-9 px-2 hover:bg-surface-hover relative group"
-              >
-                <Avatar className="size-6">
-                  <AvatarImage src={user?.image || undefined} />
-                  <AvatarFallback className="text-xs">
-                    {userInitials}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:block text-sm font-medium text-foreground-default">
-                  {user?.name || user?.email || "User"}
-                </span>
-                <ChevronDown className="w-3 h-3 text-foreground-muted group-hover:text-foreground-default transition-colors" />
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="w-fit p-0">
+                  <Avatar className="size-8">
+                    <AvatarImage src={user?.image || undefined} />
+                    <AvatarFallback className="text-xs font-sans">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
 
-                <div className="absolute inset-0 rounded-md bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity -z-10" />
-              </Button>
-            </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 font-sans">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium text-foreground-default">
+                      {user?.name || "User"}
+                    </p>
+                    <p className="text-xs text-foreground-muted">
+                      {user?.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
 
-            <DropdownMenuContent
-              align="end"
-              className="w-56 auth-surface border-default/50 relative"
-            >
-              <GridCross
-                position="relative"
-                size="sm"
-                opacity={0.1}
-                className="absolute top-2 right-2"
-                style={{ transform: "scale(0.5)" }}
-              />
+                <DropdownMenuSeparator />
 
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium text-foreground-default">
-                    {user?.name || "User"}
-                  </p>
-                  <p className="text-xs text-foreground-muted">{user?.email}</p>
-                </div>
-              </DropdownMenuLabel>
+                <DropdownMenuItem className="gap-2 cursor-pointer">
+                  <User className="w-4 h-4 text-foreground-subtle" />
+                  Profile
+                </DropdownMenuItem>
 
-              <DropdownMenuSeparator />
+                <DropdownMenuItem className="gap-2 cursor-pointer">
+                  <Settings className="w-4 h-4 text-foreground-subtle" />
+                  Settings
+                </DropdownMenuItem>
 
-              <DropdownMenuItem className="gap-2 cursor-pointer">
-                <User className="w-4 h-4 text-foreground-subtle" />
-                Profile
-              </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2 cursor-pointer">
+                  <Key className="w-4 h-4 text-foreground-subtle" />
+                  API Keys
+                </DropdownMenuItem>
 
-              <DropdownMenuItem className="gap-2 cursor-pointer">
-                <Settings className="w-4 h-4 text-foreground-subtle" />
-                Settings
-              </DropdownMenuItem>
+                <DropdownMenuItem className="gap-2 cursor-pointer">
+                  <Palette className="w-4 h-4 text-foreground-subtle" />
+                  Theme
+                </DropdownMenuItem>
 
-              <DropdownMenuItem className="gap-2 cursor-pointer">
-                <Key className="w-4 h-4 text-foreground-subtle" />
-                API Keys
-              </DropdownMenuItem>
+                <DropdownMenuSeparator />
 
-              <DropdownMenuItem className="gap-2 cursor-pointer">
-                <Palette className="w-4 h-4 text-foreground-subtle" />
-                Theme
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem
-                className="gap-2 cursor-pointer text-error hover:text-error"
-                onClick={handleLogout}
-              >
-                <LogOut className="w-4 h-4" />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuItem
+                  className="gap-2 cursor-pointer"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          <ModeToggler />
         </div>
       </div>
     </div>

@@ -1,149 +1,206 @@
-import { Button } from "@/components/ui/button";
-import { GridCross } from "@/components/ui/grid-cross";
-import { Send, Paperclip, Smile, MoreVertical } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { api } from "@/trpc/react";
+import { Button } from "@/components/ui/button";
+import { ChatMessage } from "@/components/chat/chat-message";
+import { ChatInput } from "@/components/chat/chat-input";
+import { MessageSkeleton } from "@/components/chat/message-skeleton";
+import { useChatContext } from "@/contexts/chat-context";
+import { useSession } from "@/hooks/use-auth";
+import { useNavigate } from "react-router-dom";
+import { useAutoScroll } from "@/hooks/use-auto-scroll";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const session = useSession();
 
-  const conversation = {
-    id: id || "1",
-    title: "AI Assistant Help",
-    messages: [
-      {
-        id: "1",
-        role: "user" as const,
-        content: "Hello! I need help with building a React component.",
-        timestamp: "2 minutes ago",
-      },
-      {
-        id: "2",
-        role: "assistant" as const,
-        content:
-          "I'd be happy to help you build a React component! What specific type of component are you looking to create? Are you working on something like a form, a data display, or perhaps a interactive element?",
-        timestamp: "2 minutes ago",
-      },
-      {
-        id: "3",
-        role: "user" as const,
-        content:
-          "I want to create a reusable button component with different variants.",
-        timestamp: "1 minute ago",
-      },
-    ],
+  const { messagesEndRef, lastMessageRef, handleNewMessage } = useAutoScroll({
+    topbarHeight: 64,
+    maxQuestionLines: 3,
+    lineHeight: 24,
+    smooth: true,
+  });
+
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    stop,
+    reload,
+    selectedModel,
+    setSelectedModel,
+    isNavigatingToNewChat,
+    setCurrentConversationId,
+    setMessages,
+    status,
+  } = useChatContext();
+
+  const shouldFetchConversation = !!id && !isNavigatingToNewChat;
+
+  console.log({ id });
+
+  const {
+    data: conversation,
+    isLoading: conversationLoading,
+    isError,
+    error,
+    status: conversationStatus,
+  } = api.conversations.getById.useQuery(
+    { id: id! },
+    {
+      enabled: shouldFetchConversation && !!session,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      retry: 1,
+      retryDelay: 1000,
+    }
+  );
+
+  console.log({
+    messages,
+  });
+
+  const prevMessagesLength = useRef(messages.length);
+
+  useEffect(() => {
+    if (messages.length > prevMessagesLength.current) {
+      const lastMessage = messages[messages.length - 1];
+      const isNewUserMessage = lastMessage?.role === "user";
+
+      handleNewMessage(isNewUserMessage);
+
+      prevMessagesLength.current = messages.length;
+    }
+  }, [messages, handleNewMessage]);
+
+  useEffect(() => {
+    if (isError && error.data?.code === "NOT_FOUND") {
+      console.log("NOT_FOUND");
+      navigate("/conversations");
+    }
+  }, [isError, error]);
+
+  useEffect(() => {
+    if (conversationStatus === "success" && conversation?.messages.length > 0) {
+      const formattedMessages = conversation.messages.map((msg) => ({
+        id: msg.id,
+        role: msg.role as "user" | "assistant" | "system",
+        content: msg.content,
+        createdAt: new Date(msg.createdAt),
+      }));
+
+      setMessages(formattedMessages);
+    }
+  }, [conversationStatus]);
+
+  useEffect(() => {
+    setCurrentConversationId(id!);
+  }, []);
+
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!input.trim() || status === "streaming") return;
+    handleSubmit(e);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const formEvent = new Event("submit", {
+        bubbles: true,
+        cancelable: true,
+      }) as unknown as React.FormEvent<HTMLFormElement>;
+      handleFormSubmit(formEvent);
+    }
+  };
+
+  const handleReload = () => {
+    reload();
+  };
+
+  const handleImageAttach = () => {
+    // TODO: Implement image attachment functionality
+    console.log("Image attach clicked");
+  };
+
+  if (conversationLoading) {
+    return (
+      <div className="h-full flex flex-col grid-pattern-background px-8">
+        <div className="flex-1 py-4 max-w-2xl mx-auto w-full">
+          <MessageSkeleton />
+        </div>
+
+        <div className="max-md:max-w-2xl max-md:w-full md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2">
+          <ChatInput
+            value=""
+            onChange={() => {}}
+            onKeyDown={() => {}}
+            onSubmit={() => {}}
+            onImageAttach={() => {}}
+            selectedModel={selectedModel}
+            onModelChange={() => {}}
+            disabled={true}
+            className="flex-1"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (shouldFetchConversation && !conversationLoading && !conversation) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-foreground-muted">Conversation not found</p>
+          <Button variant="outline" onClick={() => window.history.back()}>
+            Go Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  console.log({ messages });
+
   return (
-    <div className="flex flex-col h-full relative font-sans">
-      <div className="auth-surface border-b border-default/50 px-6 py-4 flex-shrink-0 relative">
-        <GridCross position="tl" size="sm" opacity={0.15} />
-        <GridCross position="tr" size="sm" opacity={0.15} />
-
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-foreground-default font-sans">
-              {conversation.title}
-            </h1>
-            <p className="text-sm text-foreground-muted font-sans">
-              AI Assistant • <span className="font-mono">Online</span>
-            </p>
-          </div>
-
-          <Button variant="ghost" size="icon">
-            <MoreVertical className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto p-6 space-y-6">
-        {conversation.messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex gap-3 ${
-              message.role === "user" ? "flex-row-reverse" : "flex-row"
-            }`}
-          >
-            <Avatar className="flex-shrink-0">
-              <AvatarFallback className="font-mono">
-                {message.role === "user" ? "You" : "AI"}
-              </AvatarFallback>
-            </Avatar>
-
+    <div className="flex flex-col grid-pattern-background h-full px-8">
+      <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+1rem)]">
+        <div className="flex flex-col gap-12">
+          {messages.map((message, index) => (
             <div
-              className={`auth-surface p-4 max-w-[70%] relative ${
-                message.role === "user"
-                  ? "bg-primary/5 border-primary/20"
-                  : "bg-surface-secondary"
-              }`}
+              key={message.id || index}
+              ref={index === messages.length - 1 ? lastMessageRef : undefined}
+              data-role={message.role}
             >
-              <GridCross
-                position="relative"
-                size="sm"
-                opacity={0.05}
-                className="absolute top-1 right-1"
-              />
-
-              <div className="relative z-10">
-                <p className="text-foreground-default text-sm leading-relaxed font-sans">
-                  {message.content}
-                </p>
-                <p className="text-xs text-foreground-muted mt-2 font-mono">
-                  {message.timestamp}
-                </p>
-              </div>
+              <ChatMessage message={message} />
             </div>
-          </div>
-        ))}
-
-        <div className="flex gap-3">
-          <Avatar className="flex-shrink-0">
-            <AvatarFallback className="font-mono">AI</AvatarFallback>
-          </Avatar>
-          <div className="auth-surface p-4 relative">
-            <div className="flex space-x-1">
-              <div className="w-2 h-2 bg-foreground-muted rounded-full animate-pulse"></div>
-              <div className="w-2 h-2 bg-foreground-muted rounded-full animate-pulse delay-75"></div>
-              <div className="w-2 h-2 bg-foreground-muted rounded-full animate-pulse delay-150"></div>
-            </div>
-          </div>
+          ))}
+          <div ref={messagesEndRef} />
         </div>
+        {status === "submitted" && (
+          <div className="flex items-center gap-1 mb-2">
+            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+            <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-75" />
+            <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-150" />
+          </div>
+        )}
       </div>
 
-      <div className="auth-surface border-t border-default/50 p-6 flex-shrink-0 relative">
-        <GridCross position="bl" size="sm" opacity={0.15} />
-        <GridCross position="br" size="sm" opacity={0.15} />
-
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
-            <div className="auth-surface border border-default/50 rounded-xl p-3 focus-within:border-primary/50 transition-colors">
-              <textarea
-                placeholder="Type your message..."
-                className="w-full resize-none bg-transparent text-foreground-default placeholder:text-foreground-muted focus:outline-none min-h-[20px] max-h-32 font-sans"
-                rows={1}
-              />
-
-              <div className="flex items-center justify-between mt-2">
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <Paperclip className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <Smile className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                <div className="text-xs text-foreground-muted font-mono">
-                  Press Enter to send
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Button size="lg" className="h-12 w-12 p-0 flex-shrink-0 font-sans">
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
+      <div className="max-md:max-w-2xl max-md:w-full md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2">
+        <ChatInput
+          value={input}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onSubmit={handleFormSubmit}
+          onImageAttach={handleImageAttach}
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
+          disabled={status === "streaming" || status === "submitted"}
+          className="flex-1"
+        />
       </div>
     </div>
   );

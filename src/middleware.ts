@@ -2,14 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/server/auth/config";
 
-const protectedRoutes = [
-  "/conversations",
-  "/settings",
-  "/profile",
-  "/api/conversations",
-  "/api/messages",
-  "/api/user",
-];
+const protectedRoutes = ["/api/conversations", "/api/messages", "/api/user"];
 
 const authRoutes = ["/login", "/signup"];
 
@@ -30,6 +23,8 @@ export async function middleware(request: NextRequest) {
     const session = await auth.api.getSession({
       headers: request.headers,
     });
+
+    console.log("session", session);
 
     const isAuthenticated = !!session?.user;
 

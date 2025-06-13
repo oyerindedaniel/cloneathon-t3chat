@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, VariantProps } from "class-variance-authority";
-import { PanelLeftIcon, Plus } from "lucide-react";
+import { PanelLeftIcon } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { GridCross } from "@/components/ui/grid-cross";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -140,7 +139,7 @@ function SidebarProvider({
             } as React.CSSProperties
           }
           className={cn(
-            "group/sidebar-wrapper has-data-[variant=inset]:bg-surface-primary flex min-h-svh w-full auth-grid-background",
+            "group/sidebar-wrapper has-data-[variant=inset]:bg-surface-primary flex min-h-svh w-full",
             className
           )}
           {...props}
@@ -171,13 +170,11 @@ function Sidebar({
       <div
         data-slot="sidebar"
         className={cn(
-          "auth-surface text-foreground-default flex h-full w-(--sidebar-width) flex-col relative overflow-hidden",
+          "bg-background-default border-r border-border-subtle text-foreground-default flex h-full w-(--sidebar-width) flex-col relative overflow-hidden font-sans",
           className
         )}
         {...props}
       >
-        <GridCross position="tl" size="sm" opacity={0.2} />
-        <GridCross position="tr" size="sm" opacity={0.2} />
         <div className="relative z-10">{children}</div>
       </div>
     );
@@ -190,7 +187,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="auth-surface text-foreground-default w-(--sidebar-width) p-0 [&>button]:hidden relative overflow-hidden"
+          className="bg-background-default text-foreground-default w-(--sidebar-width) p-0 [&>button]:hidden relative overflow-hidden font-sans"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -203,8 +200,6 @@ function Sidebar({
             <SheetDescription>Displays the mobile sidebar.</SheetDescription>
           </SheetHeader>
 
-          <GridCross position="tl" size="sm" opacity={0.2} />
-          <GridCross position="tr" size="sm" opacity={0.2} />
           <div className="flex h-full w-full flex-col relative z-10">
             {children}
           </div>
@@ -252,10 +247,8 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="auth-surface border-default flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm relative overflow-hidden"
+          className="bg-background-default border-border-subtle flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm relative overflow-hidden font-sans"
         >
-          <GridCross position="tl" size="sm" opacity={0.2} />
-          <GridCross position="tr" size="sm" opacity={0.2} />
           <div className="relative z-10 flex h-full w-full flex-col">
             {children}
           </div>
@@ -279,8 +272,7 @@ function SidebarTrigger({
       variant="ghost"
       size="icon"
       className={cn(
-        "size-7 hover:bg-surface-hover transition-colors relative",
-        "before:absolute before:inset-0 before:rounded-md before:bg-primary/5 before:opacity-0 hover:before:opacity-100 before:transition-opacity",
+        "size-7 hover:bg-surface-hover transition-colors font-sans",
         className
       )}
       onClick={(event) => {
@@ -291,14 +283,6 @@ function SidebarTrigger({
     >
       <PanelLeftIcon className="w-4 h-4" />
       <span className="sr-only">Toggle Sidebar</span>
-
-      <GridCross
-        position="relative"
-        size="sm"
-        opacity={0.6}
-        className="absolute -top-1 -right-1 w-2 h-2"
-        style={{ transform: "scale(0.5)" }}
-      />
     </Button>
   );
 }
@@ -316,8 +300,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
       title="Toggle Sidebar"
       className={cn(
         "hover:after:bg-default absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
-        "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
-        "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
+        "in-data-[side=left][data-state=collapsed]_&]:cursor-e-resize in-data-[side=right][data-state=collapsed]_&]:cursor-w-resize",
         "hover:group-data-[collapsible=offcanvas]:bg-surface-secondary group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",
         "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
         "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
@@ -350,7 +333,10 @@ function SidebarInput({
     <Input
       data-slot="sidebar-input"
       data-sidebar="input"
-      className={cn("bg-surface-primary h-8 w-full shadow-none", className)}
+      className={cn(
+        "bg-surface-secondary h-8 w-full shadow-none font-sans",
+        className
+      )}
       {...props}
     />
   );
@@ -398,7 +384,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        "flex min-h-0 flex-1 flex-col gap-2 overflow-hidden group-data-[collapsible=icon]:overflow-hidden",
         className
       )}
       {...props}
@@ -429,7 +415,7 @@ function SidebarGroupLabel({
       data-slot="sidebar-group-label"
       data-sidebar="group-label"
       className={cn(
-        "text-foreground-subtle flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-none transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 focus-visible:ring-primary/50 [&>svg]:size-4 [&>svg]:shrink-0",
+        "text-foreground-subtle flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-none transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 focus-visible:ring-primary/50 [&>svg]:size-4 [&>svg]:shrink-0 font-sans",
         "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className
       )}
@@ -498,13 +484,13 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none transition-[width,height,padding] hover:bg-surface-hover hover:text-foreground-default focus-visible:ring-2 focus-visible:ring-primary/50 active:bg-surface-hover active:text-foreground-default disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-surface-hover data-[active=true]:font-medium data-[active=true]:text-foreground-default data-[state=open]:hover:bg-surface-hover data-[state=open]:hover:text-foreground-default group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
+  "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none transition-[width,height,padding] hover:bg-surface-hover hover:text-foreground-default focus-visible:ring-2 focus-visible:ring-primary/50 active:bg-surface-hover active:text-foreground-default disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-surface-hover data-[active=true]:font-medium data-[active=true]:text-foreground-default data-[state=open]:hover:bg-surface-hover data-[state=open]:hover:text-foreground-default group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 font-sans",
   {
     variants: {
       variant: {
         default: "hover:bg-surface-hover hover:text-foreground-default",
         outline:
-          "bg-surface-primary border border-default hover:bg-surface-hover hover:text-foreground-default",
+          "bg-surface-secondary border border-border-subtle hover:bg-surface-hover hover:text-foreground-default",
       },
       size: {
         default: "h-8 text-sm",

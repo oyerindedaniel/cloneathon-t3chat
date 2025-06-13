@@ -1,147 +1,159 @@
+import { useState, useCallback } from "react";
+import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { SendHorizontal, Sparkles, ImagePlus } from "lucide-react";
 import { GridCross } from "@/components/ui/grid-cross";
-import { MessageSquare, Plus, Sparkles, Zap, Clock } from "lucide-react";
+import { ModelSelector } from "@/components/model-selector";
+import { SuggestionCard } from "@/components/suggestion-card";
+import { DEFAULT_SUGGESTIONS } from "@/lib/constants/suggestions";
+import { useChatContext } from "@/contexts/chat-context";
 
 export default function ConversationsPage() {
+  const [message, setMessage] = useState("");
+  const {
+    selectedModel,
+    setSelectedModel,
+    startNewConversationInstant,
+    isCreatingConversation,
+  } = useChatContext();
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      if (!message.trim() || isCreatingConversation) return;
+
+      const messageToSend = message.trim();
+      setMessage("");
+
+      try {
+        await startNewConversationInstant(messageToSend, selectedModel);
+      } catch (error) {
+        console.error("Failed to start conversation:", error);
+        setMessage(messageToSend);
+      }
+    },
+    [
+      message,
+      selectedModel,
+      startNewConversationInstant,
+      isCreatingConversation,
+    ]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        const formEvent = new Event("submit", {
+          bubbles: true,
+          cancelable: true,
+        }) as unknown as React.FormEvent<HTMLFormElement>;
+        void handleSubmit(formEvent);
+      }
+    },
+    [handleSubmit]
+  );
+
+  const handleSuggestionClick = useCallback((suggestion: string) => {
+    setMessage(suggestion);
+  }, []);
+
+  const handleImageAttach = () => {
+    // TODO: Implement image attachment functionality
+    console.log("Image attach clicked");
+  };
+
   return (
-    <div className="p-6 h-full font-sans">
-      <div className="max-w-4xl mx-auto h-full flex flex-col">
-        <div className="text-center py-12 relative">
-          <GridCross position="center" size="lg" opacity={0.05} />
-
-          <div className="auth-surface p-8 max-w-md mx-auto auth-animate-in relative">
-            <GridCross position="tl" size="sm" opacity={0.2} />
-            <GridCross position="tr" size="sm" opacity={0.2} />
-
-            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 relative">
-              <MessageSquare className="w-8 h-8 text-primary" />
-              <GridCross
-                position="relative"
-                size="sm"
-                opacity={0.3}
-                className="absolute -top-1 -right-1"
-                style={{ transform: "scale(0.6)" }}
-              />
+    <div className="h-full flex flex-col grid-pattern-background">
+      <div className="flex-grow p-4 overflow-hidden relative">
+        <GridCross
+          style={{
+            left: `calc(3 * var(--grid-size) - (var(--cross-size) / 2))`,
+            top: `calc(4 * var(--grid-size) - (var(--cross-size) / 2))`,
+          }}
+        />
+        <div className="flex flex-col items-center justify-center h-full gap-8 max-w-4xl mx-auto">
+          <div className="text-center space-y-4">
+            <div className="flex items-center justify-center gap-2 text-primary">
+              <Sparkles className="w-8 h-8" />
+              <h1 className="text-3xl font-bold tracking-tight">T3 Chat</h1>
             </div>
-
-            <h1 className="text-2xl font-bold text-foreground-default mb-3 font-sans">
-              Start a new conversation
-            </h1>
-            <p className="text-foreground-muted mb-6 font-sans">
-              Choose how you'd like to begin your AI-powered conversation
-            </p>
-
-            <Button size="lg" className="w-full gap-2 font-sans">
-              <Plus className="w-4 h-4" />
-              New Chat
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="auth-surface p-6 hover:scale-105 transition-transform cursor-pointer relative group">
-            <GridCross
-              position="relative"
-              size="sm"
-              opacity={0.1}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            />
-
-            <div className="w-10 h-10 bg-provider-openai/10 rounded-lg flex items-center justify-center mb-3">
-              <Sparkles className="w-5 h-5 text-provider-openai" />
-            </div>
-            <h3 className="font-semibold text-foreground-default mb-2 font-sans">
-              Creative Writing
-            </h3>
-            <p className="text-sm text-foreground-muted font-sans">
-              Get help with creative content and storytelling
+            <p className="text-foreground-muted text-lg max-w-2xl">
+              Ask me anything and I'll help you with coding, analysis, creative
+              writing, and more.
             </p>
           </div>
 
-          <div className="auth-surface p-6 hover:scale-105 transition-transform cursor-pointer relative group">
-            <GridCross
-              position="relative"
-              size="sm"
-              opacity={0.1}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            />
+          <form onSubmit={handleSubmit} className="w-full max-w-2xl">
+            <div
+              className={cn(
+                "field-container relative w-full p-1.5 rounded-3xl shadow-lg overflow-hidden",
+                "border border-subtle bg-surface-secondary",
+                "transition-all duration-200 ease-in-out",
+                "focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-surface-primary",
+                isCreatingConversation && "opacity-75 pointer-events-none"
+              )}
+            >
+              <div className="flex items-center gap-2 w-full">
+                <Input
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask me anything..."
+                  className="flex-1 h-12 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pl-4 text-base pr-2"
+                  disabled={isCreatingConversation}
+                  autoFocus
+                />
 
-            <div className="w-10 h-10 bg-provider-anthropic/10 rounded-lg flex items-center justify-center mb-3">
-              <Zap className="w-5 h-5 text-provider-anthropic" />
-            </div>
-            <h3 className="font-semibold text-foreground-default mb-2 font-sans">
-              Code Assistant
-            </h3>
-            <p className="text-sm text-foreground-muted font-mono">
-              Debug, review, and improve your code
-            </p>
-          </div>
-
-          <div className="auth-surface p-6 hover:scale-105 transition-transform cursor-pointer relative group">
-            <GridCross
-              position="relative"
-              size="sm"
-              opacity={0.1}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            />
-
-            <div className="w-10 h-10 bg-provider-google/10 rounded-lg flex items-center justify-center mb-3">
-              <MessageSquare className="w-5 h-5 text-provider-google" />
-            </div>
-            <h3 className="font-semibold text-foreground-default mb-2 font-sans">
-              General Chat
-            </h3>
-            <p className="text-sm text-foreground-muted font-sans">
-              Have a conversation about anything
-            </p>
-          </div>
-        </div>
-
-        <div className="auth-surface p-6 relative">
-          <GridCross position="tl" size="sm" opacity={0.15} />
-          <GridCross position="br" size="sm" opacity={0.15} />
-
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-4 h-4 text-primary" />
-            <h2 className="font-semibold text-foreground-default font-sans">
-              Continue where you left off
-            </h2>
-          </div>
-
-          <div className="space-y-3">
-            {[
-              {
-                title: "AI Assistant Help",
-                time: "2 minutes ago",
-                preview: "How can I improve the performance of...",
-              },
-              {
-                title: "Code Review Discussion",
-                time: "1 hour ago",
-                preview: "Let's review this React component...",
-              },
-              {
-                title: "Project Planning",
-                time: "3 hours ago",
-                preview: "We need to plan the next sprint...",
-              },
-            ].map((item, index) => (
-              <div
-                key={index}
-                className="p-3 rounded-lg bg-surface-primary hover:bg-surface-hover transition-colors cursor-pointer border border-default/30"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="font-medium text-foreground-default text-sm font-sans">
-                    {item.title}
-                  </h4>
-                  <span className="text-xs text-foreground-muted font-mono">
-                    {item.time}
-                  </span>
-                </div>
-                <p className="text-xs text-foreground-muted truncate font-sans">
-                  {item.preview}
-                </p>
+                <Button
+                  type="submit"
+                  variant="default"
+                  size="icon"
+                  className="w-10 h-10 shrink-0"
+                  disabled={!message.trim() || isCreatingConversation}
+                  aria-label="Send message"
+                >
+                  {isCreatingConversation ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <SendHorizontal className="w-4 h-4" />
+                  )}
+                </Button>
               </div>
+              <div className="flex items-center gap-2 w-full">
+                <ModelSelector
+                  value={selectedModel}
+                  onValueChange={setSelectedModel}
+                  disabled={isCreatingConversation}
+                  variant="compact"
+                />
+
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="w-9 h-9 shrink-0 rounded-full"
+                  onClick={handleImageAttach}
+                  disabled={isCreatingConversation}
+                  aria-label="Attach image"
+                >
+                  <ImagePlus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </form>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
+            {DEFAULT_SUGGESTIONS.map((suggestion, index) => (
+              <SuggestionCard
+                key={index}
+                title={suggestion.title}
+                icon={suggestion.icon}
+                onClick={() => handleSuggestionClick(suggestion.title)}
+                disabled={isCreatingConversation}
+              />
             ))}
           </div>
         </div>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 interface SignupFormProps {
   className?: string;
@@ -76,7 +77,6 @@ export function SignupForm({ className, callbackURL }: SignupFormProps) {
         [field]: e.target.value,
       }));
 
-      // Clear error when user starts typing
       if (error) {
         setError(null);
       }
@@ -84,12 +84,12 @@ export function SignupForm({ className, callbackURL }: SignupFormProps) {
 
   return (
     <div className={cn("w-full space-y-6", className)}>
-      <div className="space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground-default">
-          Create an account
+      <div className="space-y-3 text-center">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground-default font-sans">
+          Create account
         </h1>
-        <p className="text-sm text-foreground-muted">
-          Join T3 Chat Cloneathon and start chatting with AI
+        <p className="text-sm text-foreground-muted font-sans">
+          Get started with your AI conversations
         </p>
       </div>
 
@@ -99,21 +99,33 @@ export function SignupForm({ className, callbackURL }: SignupFormProps) {
         </Alert>
       )}
 
-      {/* OAuth Buttons */}
-      <OAuthButtons callbackURL={callbackURL} mode="signup" />
+      <div className="space-y-4">
+        <OAuthButtons callbackURL={callbackURL} mode="signup" />
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-border-subtle" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-surface-primary px-3 text-foreground-muted font-sans">
+              Or continue with
+            </span>
+          </div>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
+        <div className="space-y-3">
           <label
             htmlFor="name"
-            className="text-sm font-medium text-foreground-default"
+            className="text-sm font-medium text-foreground-default font-sans mb-1 inline-block"
           >
             Full Name
           </label>
           <Input
             id="name"
             type="text"
-            placeholder="Enter your full name"
+            placeholder="John Doe"
             value={formData.name}
             onChange={handleInputChange("name")}
             required
@@ -122,17 +134,17 @@ export function SignupForm({ className, callbackURL }: SignupFormProps) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           <label
             htmlFor="email"
-            className="text-sm font-medium text-foreground-default"
+            className="text-sm font-medium text-foreground-default font-sans mb-1 inline-block"
           >
             Email
           </label>
           <Input
             id="email"
             type="email"
-            placeholder="Enter your email"
+            placeholder="name@example.com"
             value={formData.email}
             onChange={handleInputChange("email")}
             required
@@ -141,17 +153,17 @@ export function SignupForm({ className, callbackURL }: SignupFormProps) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           <label
             htmlFor="password"
-            className="text-sm font-medium text-foreground-default"
+            className="text-sm font-medium text-foreground-default font-sans mb-1 inline-block"
           >
             Password
           </label>
           <Input
             id="password"
             type="password"
-            placeholder="Create a password (min 8 characters)"
+            placeholder="********"
             value={formData.password}
             onChange={handleInputChange("password")}
             required
@@ -160,17 +172,17 @@ export function SignupForm({ className, callbackURL }: SignupFormProps) {
           />
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           <label
             htmlFor="confirm-password"
-            className="text-sm font-medium text-foreground-default"
+            className="text-sm font-medium text-foreground-default font-sans mb-1 inline-block"
           >
             Confirm Password
           </label>
           <Input
             id="confirm-password"
             type="password"
-            placeholder="Confirm your password"
+            placeholder="********"
             value={formData.confirmPassword}
             onChange={handleInputChange("confirmPassword")}
             required
@@ -181,7 +193,7 @@ export function SignupForm({ className, callbackURL }: SignupFormProps) {
 
         <Button
           type="submit"
-          className="w-full"
+          className="w-full font-sans"
           disabled={
             isLoading ||
             !formData.name ||
@@ -195,15 +207,18 @@ export function SignupForm({ className, callbackURL }: SignupFormProps) {
       </form>
 
       <div className="text-center">
-        <p className="text-sm text-foreground-muted">
+        <p className="text-sm text-foreground-muted font-sans">
           Already have an account?{" "}
-          <a href="/login" className="font-medium text-primary hover:underline">
+          <Link
+            to="/login"
+            className="font-medium text-primary hover:text-primary-hover transition-colors"
+          >
             Sign in
-          </a>
+          </Link>
         </p>
       </div>
 
-      <div className="text-xs text-foreground-muted text-center">
+      <div className="text-xs text-foreground-muted text-center font-sans">
         By creating an account, you agree to our Terms of Service and Privacy
         Policy.
       </div>

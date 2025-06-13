@@ -1,0 +1,105 @@
+/**
+ * Custom styles for react-syntax-highlighter
+ */
+
+/* Override react-syntax-highlighter default styles to integrate with design system */
+.react-syntax-highlighter-line-number {
+  color: var(--foreground-muted) !important;
+  user-select: none;
+}
+
+pre[class*="language-"] {
+  background: var(--chat-code-bg) !important;
+  border: 1px solid var(--border-subtle) !important;
+  box-shadow: 0 1px 2px 0 var(--shadow-color) !important;
+}
+
+pre[class*="language-"]:focus-visible {
+  box-shadow: 0 0 0 2px var(--surface-primary),
+    0 0 0 4px color-mix(in oklch, var(--accent-primary) 20%, transparent) !important;
+}
+
+/* Dark theme specific overrides */
+[data-theme="dark"] pre[class*="language-"] {
+  background: var(--chat-code-bg) !important;
+  border: 1px solid var(--border-subtle) !important;
+  box-shadow: 0 1px 2px 0 var(--shadow-color) !important;
+}
+
+[data-theme="dark"] pre[class*="language-"]:focus-visible {
+  box-shadow: 0 0 0 2px var(--surface-primary),
+    0 0 0 4px color-mix(in oklch, var(--accent-primary) 20%, transparent) !important;
+}
+
+/* Inline code styling */
+:not(pre) > code {
+  font-size: 0.875rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  overflow: hidden;
+  background-color: var(--surface-secondary);
+  color: var(--foreground-default);
+  white-space: nowrap;
+  width: fit-content;
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+}
+
+[data-theme="dark"] :not(pre) > code {
+  background-color: var(--surface-secondary);
+  color: var(--foreground-default);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Scrollbar styling for code blocks */
+pre[class*="language-"]::-webkit-scrollbar {
+  height: 8px;
+}
+
+pre[class*="language-"]::-webkit-scrollbar-track {
+  background: var(--surface-secondary);
+  border-radius: 4px;
+}
+
+pre[class*="language-"]::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 4px;
+}
+
+pre[class*="language-"]::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground-muted);
+}
+
+[data-theme="dark"] pre[class*="language-"]::-webkit-scrollbar-track {
+  background: var(--surface-secondary);
+}
+
+[data-theme="dark"] pre[class*="language-"]::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+}
+
+/* Ensure proper font family inheritance */
+pre[class*="language-"] code {
+  font-family: var(--font-mono) !important;
+}
+
+/* Fix any potential layout issues */
+pre[class*="language-"] {
+  margin: 0 !important;
+  padding: 1rem !important;
+  overflow-x: auto !important;
+  border-radius: 0.375rem !important;
+}
+
+/* Ensure copy button positioning works correctly */
+.group:hover .opacity-0 {
+  opacity: 1;
+}
+
+/* Additional spacing and typography adjustments */
+pre[class*="language-"] {
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+  tab-size: 2 !important;
+  -moz-tab-size: 2 !important;
+}

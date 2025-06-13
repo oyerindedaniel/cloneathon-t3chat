@@ -9,7 +9,6 @@ import {
   useMotionTemplate,
   useSpring,
 } from "framer-motion";
-import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 
 export function ModeToggler() {
@@ -59,7 +58,7 @@ export function ModeToggler() {
   const filterId = `bg-filter-${resolvedTheme}`;
 
   return (
-    <div className="fixed top-6 right-6 z-50 rounded-3xl bg-surface-secondary p-1 shadow-md border border-subtle overflow-hidden">
+    <div className="rounded-3xl bg-surface-secondary p-1 shadow-md border border-subtle overflow-hidden">
       <AnimatePresence>
         <motion.svg
           key={resolvedTheme}
@@ -106,13 +105,13 @@ export function ModeToggler() {
             WebkitClipPath: motionClipPath,
           }}
         >
-          <span className="flex-1 inline-flex justify-center items-center h-8 w-8">
+          <span className="flex-1 inline-flex justify-center items-center size-7">
             <Sun className="w-4 h-4 text-foreground-default" />
           </span>
-          <span className="flex-1 inline-flex justify-center items-center h-8 w-8">
+          <span className="flex-1 inline-flex justify-center items-center size-7">
             <Monitor className="w-4 h-4 text-foreground-default" />
           </span>
-          <span className="flex-1 inline-flex justify-center items-center h-8 w-8">
+          <span className="flex-1 inline-flex justify-center items-center size-7">
             <Moon className="w-4 h-4 text-foreground-default" />
           </span>
         </motion.div>
@@ -121,10 +120,9 @@ export function ModeToggler() {
           <Button
             ref={lightRef}
             variant="themeToggle"
-            size="icon"
             onClick={() => setTheme("light")}
             aria-label="Switch to light mode"
-            className="flex-1"
+            className="flex-1 size-7"
           >
             <Sun className="w-4 h-4" />
           </Button>
@@ -132,10 +130,9 @@ export function ModeToggler() {
           <Button
             ref={systemRef}
             variant="themeToggle"
-            size="icon"
             onClick={() => setTheme("system")}
             aria-label="Switch to system theme"
-            className="flex-1"
+            className="flex-1 size-7"
           >
             <Monitor className="w-4 h-4" />
           </Button>
@@ -143,10 +140,9 @@ export function ModeToggler() {
           <Button
             ref={darkRef}
             variant="themeToggle"
-            size="icon"
             onClick={() => setTheme("dark")}
             aria-label="Switch to dark mode"
-            className="flex-1"
+            className="flex-1 size-7"
           >
             <Moon className="w-4 h-4" />
           </Button>

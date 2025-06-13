@@ -1,0 +1,29 @@
+import React from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import { mdxComponents } from "./mdx-components";
+import { cn } from "@/lib/utils";
+
+interface MarkdownRendererProps {
+  content: string;
+  className?: string;
+}
+
+export function MarkdownRenderer({
+  content,
+  className,
+}: MarkdownRendererProps) {
+  return (
+    <div className={cn("max-w-none", className)}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={mdxComponents}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
