@@ -276,11 +276,6 @@ const Pre = ({
     setShowLineNumbers(!showLineNumbers);
   };
 
-  console.log("=== SIMPLE DEBUG ===");
-  console.log("Final language:", language);
-  console.log("Final code:", code);
-  console.log("=== END SIMPLE DEBUG ===");
-
   return (
     <div className="relative group mb-3">
       <div className="flex items-center justify-between px-4 py-2 bg-surface-tertiary/50 border border-border-subtle border-b-0 rounded-t-md backdrop-blur-sm">
@@ -356,7 +351,7 @@ const Pre = ({
         codeTagProps={{
           style: {
             fontFamily: "var(--font-geist-mono)",
-            fontSize: "0.8rem",
+            fontSize: "0.75rem",
             lineHeight: "1.5",
           },
         }}

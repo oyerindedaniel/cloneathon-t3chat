@@ -22,6 +22,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useSidebar } from "@/components/ui/sidebar";
 import { ModeToggler } from "@/components/mode-toggler";
+import { useSettingsDialog } from "@/hooks/use-settings-dialog";
 
 interface TopbarProps {
   user?: {
@@ -34,6 +35,7 @@ interface TopbarProps {
 export function Topbar({ user }: TopbarProps) {
   const { signOut } = useAuth();
   const { toggleSidebar } = useSidebar();
+  const { openSettings } = useSettingsDialog();
 
   const userInitials = user?.name
     ? user.name
@@ -107,12 +109,18 @@ export function Topbar({ user }: TopbarProps) {
                   Profile
                 </DropdownMenuItem>
 
-                <DropdownMenuItem className="gap-2 cursor-pointer">
+                <DropdownMenuItem
+                  className="gap-2 cursor-pointer"
+                  onClick={() => openSettings("settings")}
+                >
                   <Settings className="w-4 h-4 text-foreground-subtle" />
                   Settings
                 </DropdownMenuItem>
 
-                <DropdownMenuItem className="gap-2 cursor-pointer">
+                <DropdownMenuItem
+                  className="gap-2 cursor-pointer"
+                  onClick={() => openSettings("api-keys")}
+                >
                   <Key className="w-4 h-4 text-foreground-subtle" />
                   API Keys
                 </DropdownMenuItem>

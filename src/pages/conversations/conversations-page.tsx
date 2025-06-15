@@ -6,23 +6,35 @@ import { SendHorizontal, Sparkles, ImagePlus } from "lucide-react";
 import { GridCross } from "@/components/ui/grid-cross";
 import { ModelSelector } from "@/components/model-selector";
 import { SuggestionCard } from "@/components/suggestion-card";
+import { MessageLimitWarning } from "@/components/message-limit-warning";
 import { DEFAULT_SUGGESTIONS } from "@/lib/constants/suggestions";
 import { useChatContext } from "@/contexts/chat-context";
+import { useUncontrolledInputEmpty } from "@/hooks/use-uncontrolled-input-empty";
 
 export default function ConversationsPage() {
   const [message, setMessage] = useState("");
+  const [inputRef, isEmpty] = useUncontrolledInputEmpty();
+
   const {
     selectedModel,
     setSelectedModel,
     startNewConversationInstant,
     isCreatingConversation,
+
+    isGuest,
+    canSendMessage,
+    remainingMessages,
+    totalMessages,
+    maxMessages,
   } = useChatContext();
+
+  const isAtLimit = isGuest && !canSendMessage;
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
 
-      if (!message.trim() || isCreatingConversation) return;
+      if (!message.trim() || isCreatingConversation || isAtLimit) return;
 
       const messageToSend = message.trim();
       setMessage("");
@@ -39,6 +51,7 @@ export default function ConversationsPage() {
       selectedModel,
       startNewConversationInstant,
       isCreatingConversation,
+      isAtLimit,
     ]
   );
 
@@ -56,14 +69,21 @@ export default function ConversationsPage() {
     [handleSubmit]
   );
 
-  const handleSuggestionClick = useCallback((suggestion: string) => {
-    setMessage(suggestion);
-  }, []);
+  const handleSuggestionClick = useCallback(
+    (suggestion: string) => {
+      if (!isAtLimit) {
+        setMessage(suggestion);
+      }
+    },
+    [isAtLimit]
+  );
 
   const handleImageAttach = () => {
     // TODO: Implement image attachment functionality
     console.log("Image attach clicked");
   };
+
+  const effectiveDisabled = isCreatingConversation || isAtLimit;
 
   return (
     <div className="h-full flex flex-col grid-pattern-background">
@@ -86,64 +106,78 @@ export default function ConversationsPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="w-full max-w-2xl">
-            <div
-              className={cn(
-                "field-container relative w-full p-1.5 rounded-3xl shadow-lg overflow-hidden",
-                "border border-subtle bg-surface-secondary",
-                "transition-all duration-200 ease-in-out",
-                "focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-surface-primary",
-                isCreatingConversation && "opacity-75 pointer-events-none"
-              )}
-            >
-              <div className="flex items-center gap-2 w-full">
-                <Input
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Ask me anything..."
-                  className="flex-1 h-12 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pl-4 text-base pr-2"
-                  disabled={isCreatingConversation}
-                  autoFocus
-                />
+          <div className="w-full max-w-2xl space-y-4">
+            {isGuest && (
+              <MessageLimitWarning
+                remainingMessages={remainingMessages}
+                totalMessages={totalMessages}
+                maxMessages={maxMessages}
+              />
+            )}
 
-                <Button
-                  type="submit"
-                  variant="default"
-                  size="icon"
-                  className="w-10 h-10 shrink-0"
-                  disabled={!message.trim() || isCreatingConversation}
-                  aria-label="Send message"
-                >
-                  {isCreatingConversation ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <SendHorizontal className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
-              <div className="flex items-center gap-2 w-full">
-                <ModelSelector
-                  value={selectedModel}
-                  onValueChange={setSelectedModel}
-                  disabled={isCreatingConversation}
-                  variant="compact"
-                />
+            <form onSubmit={handleSubmit}>
+              <div
+                className={cn(
+                  "field-container relative w-full p-1.5 rounded-3xl shadow-lg overflow-hidden",
+                  "border border-subtle bg-surface-secondary",
+                  "transition-all duration-200 ease-in-out",
+                  "focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 focus-within:ring-offset-surface-primary",
+                  effectiveDisabled && "opacity-75"
+                )}
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <Input
+                    ref={inputRef}
+                    defaultValue={message}
+                    onKeyDown={handleKeyDown}
+                    placeholder={
+                      isAtLimit
+                        ? "Sign up to continue chatting..."
+                        : "Ask me anything..."
+                    }
+                    className="flex-1 h-12 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 pl-4 text-base pr-2"
+                    disabled={effectiveDisabled}
+                    autoFocus
+                  />
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="w-9 h-9 shrink-0 rounded-full"
-                  onClick={handleImageAttach}
-                  disabled={isCreatingConversation}
-                  aria-label="Attach image"
-                >
-                  <ImagePlus className="w-4 h-4" />
-                </Button>
+                  <Button
+                    type="submit"
+                    variant="default"
+                    size="icon"
+                    className="w-10 h-10 shrink-0"
+                    disabled={isEmpty || effectiveDisabled}
+                    aria-label="Send message"
+                  >
+                    {isCreatingConversation ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <SendHorizontal className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2 w-full">
+                  <ModelSelector
+                    value={selectedModel}
+                    onValueChange={setSelectedModel}
+                    disabled={effectiveDisabled}
+                    variant="compact"
+                  />
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="w-9 h-9 shrink-0 rounded-full"
+                    onClick={handleImageAttach}
+                    disabled={effectiveDisabled}
+                    aria-label="Attach image"
+                  >
+                    <ImagePlus className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          </form>
+            </form>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
             {DEFAULT_SUGGESTIONS.map((suggestion, index) => (
@@ -152,7 +186,7 @@ export default function ConversationsPage() {
                 title={suggestion.title}
                 icon={suggestion.icon}
                 onClick={() => handleSuggestionClick(suggestion.title)}
-                disabled={isCreatingConversation}
+                disabled={effectiveDisabled}
               />
             ))}
           </div>

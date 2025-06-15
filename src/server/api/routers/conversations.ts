@@ -190,6 +190,44 @@ export const conversationsRouter = createTRPCRouter({
       return result[0]!;
     }),
 
+  updateTitle: protectedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        title: z.string().min(1).max(200),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, title } = input;
+
+      const existingConversation = await ctx.db
+        .select()
+        .from(conversations)
+        .where(eq(conversations.id, id))
+        .limit(1);
+
+      if (
+        !existingConversation[0] ||
+        existingConversation[0].userId !== ctx.session.user.id
+      ) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Conversation not found",
+        });
+      }
+
+      const result = await ctx.db
+        .update(conversations)
+        .set({
+          title,
+          updatedAt: new Date(),
+        })
+        .where(eq(conversations.id, id))
+        .returning();
+
+      return result[0]!;
+    }),
+
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {

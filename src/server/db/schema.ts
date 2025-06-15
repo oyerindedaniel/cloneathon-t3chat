@@ -171,38 +171,6 @@ export const verification = createTable(
 );
 
 // ================================
-// API KEY MANAGEMENT (BYOK)
-// ================================
-
-export const apiKeys = createTable(
-  "api_key",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .references(() => users.id, { onDelete: "cascade" })
-      .notNull(),
-    provider: providerEnum("provider").notNull(),
-    encryptedKey: text("encrypted_key").notNull(),
-    alias: varchar("alias", { length: 100 }),
-    capabilities: jsonb("capabilities").default([]),
-    rateLimit: jsonb("rate_limit").default({}),
-    isActive: boolean("is_active").default(true).notNull(),
-    lastValidated: timestamp("last_validated", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
-      () => new Date()
-    ),
-  },
-  (t) => [
-    index("api_key_user_idx").on(t.userId),
-    index("api_key_provider_idx").on(t.provider),
-    index("api_key_active_idx").on(t.isActive),
-  ]
-);
-
-// ================================
 // CONVERSATIONS & BRANCHING
 // ================================
 
@@ -445,7 +413,6 @@ export const modelPerformance = createTable(
 export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(userSessions),
   accounts: many(accounts),
-  apiKeys: many(apiKeys),
   conversations: many(conversations),
   attachments: many(attachments),
   streamSessions: many(streamSessions),
@@ -462,13 +429,6 @@ export const userSessionsRelations = relations(userSessions, ({ one }) => ({
 export const accountsRelations = relations(accounts, ({ one }) => ({
   user: one(users, {
     fields: [accounts.userId],
-    references: [users.id],
-  }),
-}));
-
-export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
-  user: one(users, {
-    fields: [apiKeys.userId],
     references: [users.id],
   }),
 }));
@@ -593,9 +553,6 @@ export type NewAccount = typeof accounts.$inferInsert;
 
 export type Verification = typeof verification.$inferSelect;
 export type NewVerification = typeof verification.$inferInsert;
-
-export type ApiKey = typeof apiKeys.$inferSelect;
-export type NewApiKey = typeof apiKeys.$inferInsert;
 
 export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;

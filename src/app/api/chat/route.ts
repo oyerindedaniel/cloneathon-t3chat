@@ -1,5 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { streamText, convertToCoreMessages } from "ai";
+import { streamText, convertToCoreMessages, smoothStream } from "ai";
 import { getSession } from "@/server/auth/session";
 import { db } from "@/server/db";
 import {
@@ -12,20 +12,54 @@ import {
   generateSystemMessage,
   detectConversationContext,
 } from "@/lib/ai/system-message";
+import type { Message } from "ai";
+import { cookies } from "next/headers";
+import { getErrorDisplayInfo } from "@/lib/utils/openrouter-errors";
 
 export const maxDuration = 60;
 
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-});
+const REASONING_MODELS = [
+  "deepseek/deepseek-r1",
+  "deepseek/deepseek-r1:free",
+  "deepseek/deepseek-r1-distill-llama-70b",
+  "microsoft/phi-4-reasoning-plus:free",
+  "anthropic/claude-3.7-sonnet",
+  "google/gemini-flash-thinking-exp",
+  "openai/o1-preview",
+  "openai/o1-mini",
+  "x-ai/grok-2-reasoning-beta",
+];
+
+function supportsReasoning(modelId: string): boolean {
+  return REASONING_MODELS.some((model) =>
+    modelId.includes(model.split("/")[1])
+  );
+}
+
+async function getApiKey(): Promise<string> {
+  const cookieStore = await cookies();
+  const userApiKey = cookieStore.get("apikey_openrouter");
+
+  return userApiKey?.value || process.env.OPENROUTER_API_KEY!;
+}
+
+function errorHandler(error: unknown): string {
+  console.log("Error handler called with:", error);
+
+  const errorInfo = getErrorDisplayInfo(error);
+
+  return JSON.stringify({
+    type: errorInfo.type,
+    title: errorInfo.title,
+    message: errorInfo.message,
+    shouldOpenSettings: errorInfo.shouldOpenSettings,
+  });
+}
 
 export async function POST(req: Request) {
   try {
     const session = await getSession();
-
-    if (!session?.user) {
-      return new Response("Unauthorized", { status: 401 });
-    }
+    const isAuthenticated = !!session?.user;
 
     const {
       messages: inputMessages,
@@ -42,8 +76,29 @@ export async function POST(req: Request) {
       return new Response("Model ID is required", { status: 400 });
     }
 
+    const apiKey = await getApiKey();
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({
+          error: "API_KEY_MISSING",
+          message:
+            "OpenRouter API key is required. Please add your API key in settings.",
+        }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const openrouter = createOpenRouter({
+      apiKey,
+    });
+
     let conversation = null;
-    if (conversationId) {
+    let allMessages: Message[] = [];
+
+    if (isAuthenticated && conversationId) {
       const conversationData = await db
         .select()
         .from(conversations)
@@ -87,15 +142,15 @@ export async function POST(req: Request) {
           console.error("Failed to create conversation on-the-fly:", error);
         }
       }
-    }
 
-    const allMessages = conversation
-      ? await db
+      if (conversation) {
+        allMessages = await db
           .select()
           .from(messages)
           .where(eq(messages.conversationId, conversationId))
-          .orderBy(asc(messages.sequenceNumber))
-      : [];
+          .orderBy(asc(messages.sequenceNumber));
+      }
+    }
 
     const conversationContext = detectConversationContext([
       ...allMessages.map((msg) => ({
@@ -124,72 +179,97 @@ export async function POST(req: Request) {
       messages: coreMessages,
       temperature: conversation?.temperature ?? 0.7,
       maxTokens: conversation?.maxTokens ?? 1000,
+      experimental_transform: smoothStream(),
+      ...(supportsReasoning(modelId) && {
+        reasoning: {
+          effort: "high",
+          exclude: false,
+        },
+      }),
       onError({ error }) {
-        console.error("Streaming error:", error);
+        const errorInfo = getErrorDisplayInfo(error);
+
+        console.error("Streaming error:", errorInfo.title, errorInfo.message);
       },
       onFinish: async ({ text, usage, finishReason, response }) => {
+        if (!isAuthenticated || !conversationId) {
+          return;
+        }
+
         try {
-          if (conversationId) {
-            const lastMessage = await db
-              .select({ sequenceNumber: messages.sequenceNumber })
-              .from(messages)
-              .where(eq(messages.conversationId, conversationId))
-              .orderBy(desc(messages.sequenceNumber))
-              .limit(1);
+          const lastMessage = await db
+            .select({ sequenceNumber: messages.sequenceNumber })
+            .from(messages)
+            .where(eq(messages.conversationId, conversationId))
+            .orderBy(desc(messages.sequenceNumber))
+            .limit(1);
 
-            const nextSequence = (lastMessage[0]?.sequenceNumber ?? 0) + 1;
+          const nextSequence = (lastMessage[0]?.sequenceNumber ?? 0) + 1;
 
-            const userMessage = inputMessages[inputMessages.length - 1];
-            if (userMessage && userMessage.role === "user") {
-              await db.insert(messages).values({
-                conversationId,
-                role: "user",
-                content: userMessage.content,
-                sequenceNumber: nextSequence,
-                metadata: {
-                  timestamp: new Date(),
-                  model: modelId,
-                },
-              });
-            }
-
+          const userMessage = inputMessages[inputMessages.length - 1];
+          if (userMessage && userMessage.role === "user") {
             await db.insert(messages).values({
               conversationId,
-              role: "assistant",
-              content: text,
-              sequenceNumber: nextSequence + 1,
+              role: "user",
+              content: userMessage.content,
+              sequenceNumber: nextSequence,
               metadata: {
                 timestamp: new Date(),
                 model: modelId,
-                usage,
-                finishReason,
-                responseId: response.id,
               },
             });
-
-            const updateData: Partial<NewConversation> = {
-              updatedAt: new Date(),
-              lastMessageAt: new Date(),
-            };
-
-            if (conversation && conversation.model !== modelId) {
-              updateData.model = modelId;
-            }
-
-            await db
-              .update(conversations)
-              .set(updateData)
-              .where(eq(conversations.id, conversationId));
           }
+
+          await db.insert(messages).values({
+            conversationId,
+            role: "assistant",
+            content: text,
+            sequenceNumber: nextSequence + 1,
+            metadata: {
+              timestamp: new Date(),
+              model: modelId,
+              usage,
+              finishReason,
+              responseId: response.id,
+            },
+          });
+
+          const updateData: Partial<NewConversation> = {
+            updatedAt: new Date(),
+            lastMessageAt: new Date(),
+          };
+
+          if (conversation && conversation.model !== modelId) {
+            updateData.model = modelId;
+          }
+
+          await db
+            .update(conversations)
+            .set(updateData)
+            .where(eq(conversations.id, conversationId));
         } catch (error) {
           console.error("Error saving messages:", error);
         }
       },
     });
 
-    return result.toDataStreamResponse();
+    return result.toDataStreamResponse({
+      getErrorMessage: errorHandler,
+    });
   } catch (error) {
     console.error("Chat API error:", error);
-    return new Response("Internal Server Error", { status: 500 });
+
+    const errorInfo = getErrorDisplayInfo(error);
+
+    return new Response(
+      JSON.stringify({
+        error: errorInfo.type.toUpperCase(),
+        message: errorInfo.message,
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }

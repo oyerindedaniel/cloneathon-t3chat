@@ -1,32 +1,25 @@
 import { useParams } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useCallback } from "react";
 import { api } from "@/trpc/react";
-import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatInput } from "@/components/chat/chat-input";
 import { MessageSkeleton } from "@/components/chat/message-skeleton";
 import { useChatContext } from "@/contexts/chat-context";
 import { useSession } from "@/hooks/use-auth";
-import { useNavigate } from "react-router-dom";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
+import { useErrorAlert } from "@/hooks/use-error-alert";
+import { ErrorAlert } from "@/components/error-alert";
+import { useSettingsDialog } from "@/hooks/use-settings-dialog";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const session = useSession();
-
-  const { messagesEndRef, lastMessageRef, handleNewMessage } = useAutoScroll({
-    topbarHeight: 64,
-    maxQuestionLines: 3,
-    lineHeight: 24,
-    smooth: true,
-  });
-
+  const { openSettings } = useSettingsDialog();
   const {
     messages,
-    input,
-    handleInputChange,
     handleSubmit,
+    handleInputChange,
+    append,
     stop,
     reload,
     selectedModel,
@@ -35,11 +28,26 @@ export default function ChatPage() {
     setCurrentConversationId,
     setMessages,
     status,
+    error: chatError,
+    isGuest,
+    remainingMessages,
+    totalMessages,
+    maxMessages,
   } = useChatContext();
 
-  const shouldFetchConversation = !!id && !isNavigatingToNewChat;
+  console.log("Chat error:--------------------------------------", chatError);
 
-  console.log({ id });
+  const { messagesEndRef, lastMessageRef, temporarySpaceHeight } =
+    useAutoScroll({
+      topbarHeight: 64,
+      maxQuestionLines: 3,
+      lineHeight: 24,
+      smooth: true,
+      messages,
+      isStreaming: status === "streaming",
+    });
+
+  const shouldFetchConversation = !!id && !isNavigatingToNewChat;
 
   const {
     data: conversation,
@@ -50,38 +58,21 @@ export default function ChatPage() {
   } = api.conversations.getById.useQuery(
     { id: id! },
     {
-      enabled: shouldFetchConversation && !!session,
+      enabled: shouldFetchConversation && !!session?.userId,
       refetchOnWindowFocus: false,
       refetchOnMount: false,
       refetchOnReconnect: false,
       retry: 1,
-      retryDelay: 1000,
     }
   );
 
-  console.log({
-    messages,
+  const { alertState, hideAlert, handleApiError } = useErrorAlert({
+    conversationError: { isError, error },
+    streamStatus: status,
+    chatError,
+    onResume: reload,
+    onOpenSettings: openSettings,
   });
-
-  const prevMessagesLength = useRef(messages.length);
-
-  useEffect(() => {
-    if (messages.length > prevMessagesLength.current) {
-      const lastMessage = messages[messages.length - 1];
-      const isNewUserMessage = lastMessage?.role === "user";
-
-      handleNewMessage(isNewUserMessage);
-
-      prevMessagesLength.current = messages.length;
-    }
-  }, [messages, handleNewMessage]);
-
-  useEffect(() => {
-    if (isError && error.data?.code === "NOT_FOUND") {
-      console.log("NOT_FOUND");
-      navigate("/conversations");
-    }
-  }, [isError, error]);
 
   useEffect(() => {
     if (conversationStatus === "success" && conversation?.messages.length > 0) {
@@ -100,25 +91,36 @@ export default function ChatPage() {
     setCurrentConversationId(id!);
   }, []);
 
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!input.trim() || status === "streaming") return;
-    handleSubmit(e);
-  };
+  const handleMessageSubmit = useCallback(
+    (message: string) => {
+      if (!message.trim() || status === "streaming") return;
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      const formEvent = new Event("submit", {
-        bubbles: true,
-        cancelable: true,
-      }) as unknown as React.FormEvent<HTMLFormElement>;
-      handleFormSubmit(formEvent);
+      try {
+        append({
+          role: "user",
+          content: message,
+        });
+      } catch (error) {
+        handleApiError(error, "sending message");
+      }
+    },
+    [status, handleApiError, append]
+  );
+
+  const handleReload = () => {
+    try {
+      reload();
+    } catch (error) {
+      handleApiError(error, "reloading conversation");
     }
   };
 
-  const handleReload = () => {
-    reload();
+  const handleStop = () => {
+    try {
+      stop();
+    } catch (error) {
+      handleApiError(error, "stopping generation");
+    }
   };
 
   const handleImageAttach = () => {
@@ -133,75 +135,97 @@ export default function ChatPage() {
           <MessageSkeleton />
         </div>
 
-        <div className="max-md:max-w-2xl max-md:w-full md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2">
+        <div className="max-md:max-w-2xl max-md:w-full md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed z-100 bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2">
           <ChatInput
-            value=""
-            onChange={() => {}}
-            onKeyDown={() => {}}
             onSubmit={() => {}}
             onImageAttach={() => {}}
             selectedModel={selectedModel}
             onModelChange={() => {}}
             disabled={true}
             className="flex-1"
+            isGuest={isGuest}
+            remainingMessages={remainingMessages}
+            totalMessages={totalMessages}
+            maxMessages={maxMessages}
           />
         </div>
       </div>
     );
   }
 
-  if (shouldFetchConversation && !conversationLoading && !conversation) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <p className="text-foreground-muted">Conversation not found</p>
-          <Button variant="outline" onClick={() => window.history.back()}>
-            Go Back
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  console.log({ messages });
+  console.log({
+    id,
+    messages,
+  });
 
   return (
-    <div className="flex flex-col grid-pattern-background h-full px-8">
-      <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+1rem)]">
-        <div className="flex flex-col gap-12">
-          {messages.map((message, index) => (
-            <div
-              key={message.id || index}
-              ref={index === messages.length - 1 ? lastMessageRef : undefined}
-              data-role={message.role}
-            >
-              <ChatMessage message={message} />
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
-        {status === "submitted" && (
-          <div className="flex items-center gap-1 mb-2">
-            <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-            <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-75" />
-            <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-150" />
+    <>
+      <div className="flex flex-col grid-pattern-background h-full px-8">
+        <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+3rem)]">
+          <div className="flex flex-col gap-12">
+            {messages.map((message, index) => (
+              <div
+                key={message.id || index}
+                ref={index === messages.length - 1 ? lastMessageRef : undefined}
+                data-role={message.role}
+              >
+                <ChatMessage
+                  message={message}
+                  currentModel={selectedModel}
+                  onRetry={handleReload}
+                  onModelChange={setSelectedModel}
+                />
+              </div>
+            ))}
+
+            {status === "submitted" && (
+              <div className="flex items-center gap-1 mb-2">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-75" />
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-150" />
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+
+            {temporarySpaceHeight > 0 && (
+              <div
+                style={{ height: `${temporarySpaceHeight}px` }}
+                className="pointer-events-none"
+                aria-hidden="true"
+              />
+            )}
           </div>
-        )}
+        </div>
+
+        <div className="max-md:max-w-2xl max-md:w-full md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2">
+          <ChatInput
+            onSubmit={handleMessageSubmit}
+            onImageAttach={handleImageAttach}
+            selectedModel={selectedModel}
+            onModelChange={setSelectedModel}
+            disabled={status === "streaming" || status === "submitted"}
+            className="flex-1"
+            onStop={handleStop}
+            isGuest={isGuest}
+            remainingMessages={remainingMessages}
+            totalMessages={totalMessages}
+            maxMessages={maxMessages}
+          />
+        </div>
       </div>
 
-      <div className="max-md:max-w-2xl max-md:w-full md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2">
-        <ChatInput
-          value={input}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onSubmit={handleFormSubmit}
-          onImageAttach={handleImageAttach}
-          selectedModel={selectedModel}
-          onModelChange={setSelectedModel}
-          disabled={status === "streaming" || status === "submitted"}
-          className="flex-1"
-        />
-      </div>
-    </div>
+      <ErrorAlert
+        isOpen={alertState.isOpen}
+        onClose={hideAlert}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        onResume={reload}
+        showResume={
+          status === "error" && alertState.title === "Streaming Error"
+        }
+        resetTimer={alertState.resetTimer}
+      />
+    </>
   );
 }

@@ -1,12 +1,22 @@
-import { cn } from "@/lib/utils";
+import { memo } from "react";
 import { Message } from "ai";
 import { MarkdownRenderer } from "@/components/mdx";
+import { ReasoningDisplay } from "./reasoning-display";
+import { ChatControls } from "./chat-controls";
 
 interface ChatMessageProps {
-  message: Message;
+  message: Message & { reasoning?: string };
+  currentModel?: string;
+  onRetry?: () => void;
+  onModelChange?: (modelId: string) => void;
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export const ChatMessage = memo(function ChatMessage({
+  message,
+  currentModel,
+  onRetry,
+  onModelChange,
+}: ChatMessageProps) {
   const isUser = message.role === "user";
 
   if (isUser) {
@@ -23,10 +33,30 @@ export function ChatMessage({ message }: ChatMessageProps) {
   }
 
   return (
-    <div className="flex w-full justify-start">
-      <div className="max-w-[85%] text-sm leading-relaxed text-foreground-default">
-        <MarkdownRenderer content={message.content} className="" />
+    <div className="flex w-full justify-start group">
+      <div className="max-w-[85%] space-y-3">
+        {message.reasoning && (
+          <ReasoningDisplay reasoning={message.reasoning} isStreaming={false} />
+        )}
+
+        <div className="relative">
+          <div className="text-sm leading-relaxed text-foreground-default">
+            <MarkdownRenderer content={message.content} className="" />
+          </div>
+
+          {currentModel && onRetry && onModelChange && (
+            <div className="absolute -bottom-12 left-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <ChatControls
+                messageContent={message.content}
+                currentModel={currentModel}
+                onRetry={onRetry}
+                onModelChange={onModelChange}
+                className="bg-white/95 backdrop-blur-sm border border-slate-200/50 rounded-lg px-2 py-1 shadow-sm dark:bg-slate-800/95 dark:border-slate-700/50"
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
-}
+});

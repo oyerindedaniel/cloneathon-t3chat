@@ -6,7 +6,7 @@ export function useConversations() {
   const utils = api.useUtils();
 
   const conversations = api.conversations.getAll.useQuery(undefined, {
-    enabled: !!session,
+    enabled: !!session?.userId,
   });
 
   const deleteConversation = api.conversations.delete.useMutation({

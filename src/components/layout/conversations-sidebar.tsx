@@ -20,15 +20,33 @@ import { cn } from "@/lib/utils";
 import { ConversationMenu } from "@/components/conversations/conversation-menu";
 import { useChatContext } from "@/contexts/chat-context";
 import { ConversationSearch } from "../conversations/conversation-search";
+import { useGuestStorage } from "@/hooks/use-local-storage";
+import { useAuth } from "@/hooks/use-auth";
 
 export function ConversationsSidebar() {
   const { id: currentId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const { isAuthenticated } = useAuth();
+
   const { conversations, isLoading, deleteConversation, updateConversation } =
     useConversations();
+
+  const guestStorage = useGuestStorage();
+
   const { switchToConversation } = useChatContext();
+
+  const isGuest = !isAuthenticated;
+  const displayConversations = isGuest
+    ? guestStorage.conversations.map((conv) => ({
+        id: conv.id,
+        title: conv.title,
+        model: conv.model,
+        createdAt: new Date(conv.createdAt),
+        updatedAt: new Date(conv.updatedAt),
+      }))
+    : conversations;
 
   const handleNewConversation = () => {
     navigate("/conversations");
@@ -37,21 +55,32 @@ export function ConversationsSidebar() {
   const handleConversationClick = (conversationId: string) => {
     if (editingId === conversationId) return;
 
-    const conversation = conversations.find((c) => c.id === conversationId);
+    const conversation = displayConversations.find(
+      (c) => c.id === conversationId
+    );
 
     switchToConversation(conversationId, conversation?.model);
     navigate(`/conversations/${conversationId}`);
   };
 
   const handleDelete = async (id: string) => {
-    await deleteConversation({ id });
+    if (isGuest) {
+      guestStorage.deleteConversation(id);
+    } else {
+      await deleteConversation({ id });
+    }
+
     if (currentId === id) {
       navigate("/conversations");
     }
   };
 
   const handleRename = async (id: string, newTitle: string) => {
-    await updateConversation({ id, title: newTitle });
+    if (isGuest) {
+      guestStorage.updateConversation(id, { title: newTitle });
+    } else {
+      await updateConversation({ id, title: newTitle });
+    }
   };
 
   const handleStartEdit = (id: string) => {
@@ -62,7 +91,7 @@ export function ConversationsSidebar() {
     setEditingId(null);
   };
 
-  const filteredConversations = conversations.filter((conversation) =>
+  const filteredConversations = displayConversations.filter((conversation) =>
     conversation.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -97,10 +126,10 @@ export function ConversationsSidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-2">
-            Chats
+            {isGuest ? "Local Chats" : "Chats"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            {isLoading ? (
+            {isLoading && !isGuest ? (
               <div className="space-y-2 p-2">
                 {[...Array(5)].map((_, i) => (
                   <div

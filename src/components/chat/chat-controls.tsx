@@ -1,48 +1,64 @@
 import { Button } from "@/components/ui/button";
-import { StopCircle, RotateCcw } from "lucide-react";
+import { Copy, RotateCcw, Zap } from "lucide-react";
+import { ModelSwitcher } from "@/components/model-switcher";
+import { cn } from "@/lib/utils";
+import { useClipboard } from "@/hooks/use-clipboard";
 
 interface ChatControlsProps {
-  isLoading: boolean;
-  hasMessages: boolean;
-  onStop: () => void;
-  onReload: () => void;
+  messageContent: string;
+  currentModel: string;
+  onRetry: () => void;
+  onModelChange: (modelId: string) => void;
+  className?: React.HTMLAttributes<HTMLDivElement>["className"];
 }
 
 export function ChatControls({
-  isLoading,
-  hasMessages,
-  onStop,
-  onReload,
+  messageContent,
+  currentModel,
+  onRetry,
+  onModelChange,
+  className,
 }: ChatControlsProps) {
-  if (isLoading) {
-    return (
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        onClick={onStop}
-        className="shrink-0"
-        aria-label="Stop generation"
-      >
-        <StopCircle className="w-4 h-4" />
-      </Button>
-    );
-  }
+  const { copied, copy } = useClipboard();
 
-  if (hasMessages) {
-    return (
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        onClick={onReload}
-        className="shrink-0"
-        aria-label="Regenerate response"
-      >
-        <RotateCcw className="w-4 h-4" />
-      </Button>
-    );
-  }
+  const handleCopy = async () => {
+    await copy(messageContent);
+  };
 
-  return null;
+  const handleRetryWithModel = (modelId: string) => {
+    onModelChange(modelId);
+    onRetry();
+  };
+
+  return (
+    <div className={cn("flex items-center gap-1", className)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleCopy}
+        className="h-7 px-2 text-xs text-foreground-subtle hover:text-foreground-default hover:bg-surface-hover"
+      >
+        <Copy className="w-3 h-3 mr-1" />
+        {copied ? "Copied!" : "Copy"}
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onRetry}
+        className="h-7 px-2 text-xs text-foreground-subtle hover:text-foreground-default hover:bg-surface-hover"
+      >
+        <RotateCcw className="w-3 h-3 mr-1" />
+        Retry
+      </Button>
+
+      <div className="flex items-center gap-1">
+        <Zap className="w-3 h-3 text-foreground-muted" />
+        <ModelSwitcher
+          currentModel={currentModel}
+          onModelChange={handleRetryWithModel}
+        />
+      </div>
+    </div>
+  );
 }

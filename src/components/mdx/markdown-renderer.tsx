@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -8,10 +8,10 @@ import { cn } from "@/lib/utils";
 
 interface MarkdownRendererProps {
   content: string;
-  className?: string;
+  className?: React.HTMLAttributes<HTMLDivElement>["className"];
 }
 
-export function MarkdownRenderer({
+export const MarkdownRenderer = memo(function MarkdownRenderer({
   content,
   className,
 }: MarkdownRendererProps) {
@@ -26,4 +26,4 @@ export function MarkdownRenderer({
       </ReactMarkdown>
     </div>
   );
-}
+});

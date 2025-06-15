@@ -1,4 +1,6 @@
-export function MessageSkeleton() {
+import { memo } from "react";
+
+export const MessageSkeleton = memo(function MessageSkeleton() {
   return (
     <div className="space-y-4">
       <div className="flex w-full justify-end">
@@ -16,4 +18,4 @@ export function MessageSkeleton() {
       </div>
     </div>
   );
-}
+});

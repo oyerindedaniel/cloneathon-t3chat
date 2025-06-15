@@ -121,6 +121,16 @@
   --search-height: 5.625rem;
 }
 
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 0;
+  }
+
+  [data-theme="dark"] {
+    --sidebar-width: 0;
+  }
+}
+
 [data-theme="dark"] {
   --surface-primary: oklch(0.18 0 0);
   --surface-secondary: oklch(0.24 0 0);

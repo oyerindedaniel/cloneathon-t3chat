@@ -6,10 +6,16 @@ const protectedRoutes = ["/api/conversations", "/api/messages", "/api/user"];
 
 const authRoutes = ["/login", "/signup"];
 
+const guestAccessibleRoutes = [
+  "/conversations",
+  "/api/chat",
+  "/api/generate-title",
+];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/api/auth/")) {
+  if (pathname.startsWith("/api/auth/") || pathname.startsWith("/_next/")) {
     return NextResponse.next();
   }
 
@@ -19,12 +25,18 @@ export async function middleware(request: NextRequest) {
 
   const isAuthRoute = authRoutes.some((route) => pathname === route);
 
+  const isGuestAccessible = guestAccessibleRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  if (!isProtectedRoute && !isAuthRoute) {
+    return NextResponse.next();
+  }
+
   try {
     const session = await auth.api.getSession({
       headers: request.headers,
     });
-
-    console.log("session", session);
 
     const isAuthenticated = !!session?.user;
 
@@ -42,8 +54,35 @@ export async function middleware(request: NextRequest) {
   } catch (error) {
     console.error("Middleware auth error:", error);
 
-    if (isProtectedRoute) {
-      return NextResponse.redirect(new URL("/login", request.url));
+    if (isProtectedRoute && !isGuestAccessible) {
+      // Check if this might be a temporary database issue
+      // by looking at the error message
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      if (
+        errorMessage.includes("Failed query") ||
+        errorMessage.includes("INTERNAL_SERVER_ERROR")
+      ) {
+        console.warn(
+          "Database connectivity issue in middleware, allowing request to proceed"
+        );
+
+        const criticalRoutes = [
+          "/api/user",
+          "/api/conversations",
+          "/api/messages",
+        ];
+        const isCriticalRoute = criticalRoutes.some((route) =>
+          pathname.startsWith(route)
+        );
+
+        if (isCriticalRoute) {
+          return NextResponse.redirect(new URL("/login", request.url));
+        }
+      } else {
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
     }
 
     return NextResponse.next();

@@ -8,7 +8,12 @@ export interface AIModel {
     input: number;
     output: number;
   };
-  capabilities: string[];
+  capabilities: (
+    | "Image Input"
+    | "Object Generation"
+    | "Tool Usage"
+    | "Tool Streaming"
+  )[];
   recommended?: boolean;
   free?: boolean;
   supportsImages?: boolean;
@@ -25,7 +30,7 @@ export const AVAILABLE_MODELS: AIModel[] = [
     description: "Most advanced model with vision and reasoning capabilities",
     maxTokens: 4096,
     costPer1kTokens: { input: 0.005, output: 0.015 },
-    capabilities: ["Text", "Vision", "Code", "Reasoning", "Function calling"],
+    capabilities: ["Image Input", "Tool Usage", "Tool Streaming"],
     recommended: true,
     supportsImages: true,
     disabled: true,
@@ -38,7 +43,7 @@ export const AVAILABLE_MODELS: AIModel[] = [
     description: "Faster and more cost-effective version of GPT-4o",
     maxTokens: 4096,
     costPer1kTokens: { input: 0.0015, output: 0.006 },
-    capabilities: ["Text", "Vision", "Code", "Fast responses"],
+    capabilities: ["Image Input", "Tool Usage"],
     recommended: true,
     supportsImages: true,
     disabled: true,
@@ -51,13 +56,7 @@ export const AVAILABLE_MODELS: AIModel[] = [
     description: "Excellent for analysis, coding, and creative tasks",
     maxTokens: 8192,
     costPer1kTokens: { input: 0.003, output: 0.015 },
-    capabilities: [
-      "Text",
-      "Code",
-      "Analysis",
-      "Creative writing",
-      "Long context",
-    ],
+    capabilities: ["Tool Usage", "Tool Streaming"],
     disabled: true,
     disabledReason: "Requires credits - upgrade to use premium models",
   },
@@ -68,7 +67,7 @@ export const AVAILABLE_MODELS: AIModel[] = [
     description: "Fast and efficient for everyday tasks",
     maxTokens: 8192,
     costPer1kTokens: { input: 0.0008, output: 0.004 },
-    capabilities: ["Text", "Fast responses", "Cost-effective"],
+    capabilities: ["Tool Usage"],
     disabled: true,
     disabledReason: "Requires credits - upgrade to use premium models",
   },
@@ -79,7 +78,7 @@ export const AVAILABLE_MODELS: AIModel[] = [
     description: "Google's advanced AI with multimodal understanding",
     maxTokens: 2048,
     costPer1kTokens: { input: 0.0005, output: 0.0015 },
-    capabilities: ["Text", "Vision", "Code", "Multimodal"],
+    capabilities: ["Image Input", "Tool Usage"],
     supportsImages: true,
     disabled: true,
     disabledReason: "Requires credits - upgrade to use premium models",
@@ -87,54 +86,60 @@ export const AVAILABLE_MODELS: AIModel[] = [
 
   // Free Models (Available without credits)
   {
-    id: "meta-llama/llama-3.1-8b-instruct:free",
-    name: "Llama 3.1 8B (Free)",
-    provider: "Meta",
-    description: "Free open-source model, great for general tasks",
-    maxTokens: 8192,
+    id: "deepseek/deepseek-r1-0528-qwen3-8b:free",
+    name: "DeepSeek R1 0528 Qwen3 8B (Free)",
+    provider: "DeepSeek",
+    description:
+      "Distilled reasoning model with chain-of-thought capabilities, beating standard models by +10pp on AIME 2024",
+    maxTokens: 131000,
     costPer1kTokens: { input: 0, output: 0 },
-    capabilities: ["Text", "Code", "Open source", "Free"],
+    capabilities: ["Tool Usage"],
     free: true,
     recommended: true,
   },
   {
-    id: "microsoft/phi-3-mini-128k-instruct:free",
-    name: "Phi-3 Mini (Free)",
-    provider: "Microsoft",
-    description: "Compact and efficient model for everyday conversations",
+    id: "deepseek/deepseek-r1-0528:free",
+    name: "DeepSeek R1 0528 (Free)",
+    provider: "DeepSeek",
+    description:
+      "Open-source reasoning model with performance on par with OpenAI o1, fully open reasoning tokens",
+    maxTokens: 164000,
+    costPer1kTokens: { input: 0, output: 0 },
+    capabilities: ["Tool Usage"],
+    free: true,
+  },
+  {
+    id: "mistralai/devstral-small:free",
+    name: "Mistral Devstral Small (Free)",
+    provider: "Mistral",
+    description:
+      "Agentic LLM optimized for software engineering tasks, achieving 46.8% on SWE-Bench Verified",
+    maxTokens: 131000,
+    costPer1kTokens: { input: 0, output: 0 },
+    capabilities: ["Tool Usage"],
+    free: true,
+  },
+  {
+    id: "meta-llama/llama-3.3-8b-instruct:free",
+    name: "Llama 3.3 8B Instruct (Free)",
+    provider: "Meta",
+    description:
+      "Lightweight and ultra-fast variant of Llama 3.3 70B, for quick response times",
     maxTokens: 128000,
     costPer1kTokens: { input: 0, output: 0 },
-    capabilities: ["Text", "Fast responses", "Long context", "Free"],
+    capabilities: ["Tool Usage"],
     free: true,
+    recommended: true,
   },
   {
-    id: "google/gemma-2-9b-it:free",
-    name: "Gemma 2 9B (Free)",
-    provider: "Google",
-    description: "Google's open model with strong performance",
-    maxTokens: 8192,
+    id: "microsoft/phi-4-reasoning-plus:free",
+    name: "Phi 4 Reasoning Plus (Free)",
+    provider: "Microsoft",
+    description:
+      "Enhanced 14B parameter model with reinforcement learning for math, science, and code reasoning",
+    maxTokens: 33000,
     costPer1kTokens: { input: 0, output: 0 },
-    capabilities: ["Text", "Code", "Open source", "Free"],
-    free: true,
-  },
-  {
-    id: "qwen/qwen-2-7b-instruct:free",
-    name: "Qwen 2 7B (Free)",
-    provider: "Alibaba",
-    description: "Multilingual model with coding capabilities",
-    maxTokens: 32768,
-    costPer1kTokens: { input: 0, output: 0 },
-    capabilities: ["Text", "Code", "Multilingual", "Long context", "Free"],
-    free: true,
-  },
-  {
-    id: "huggingface/zephyr-7b-beta:free",
-    name: "Zephyr 7B (Free)",
-    provider: "Hugging Face",
-    description: "Fine-tuned for helpful, harmless conversations",
-    maxTokens: 4096,
-    costPer1kTokens: { input: 0, output: 0 },
-    capabilities: ["Text", "Conversational", "Free"],
+    capabilities: ["Tool Usage"],
     free: true,
   },
 
@@ -145,14 +150,18 @@ export const AVAILABLE_MODELS: AIModel[] = [
     description: "Large open-source model with strong performance",
     maxTokens: 4096,
     costPer1kTokens: { input: 0.0009, output: 0.0009 },
-    capabilities: ["Text", "Code", "Open source", "Cost-effective"],
+    capabilities: ["Tool Usage"],
     disabled: true,
     disabledReason: "Requires credits - upgrade to use premium models",
   },
 ];
 
 export const DEFAULT_MODEL = AVAILABLE_MODELS.find(
-  (m) => m.id === "meta-llama/llama-3.1-8b-instruct:free"
+  (m) => m.id === "meta-llama/llama-3.3-8b-instruct:free"
+)!;
+
+export const TITLE_GENERATION_MODEL = AVAILABLE_MODELS.find(
+  (m) => m.id === "meta-llama/llama-3.3-8b-instruct:free"
 )!;
 
 export function getModelById(id: string): AIModel | undefined {
@@ -187,19 +196,19 @@ export const MODEL_CATEGORIES = {
   free: getFreeModels(),
   premium: getPremiumModels(),
   recommended: getRecommendedModels(),
-  fast: AVAILABLE_MODELS.filter((m) =>
-    m.capabilities.includes("Fast responses")
+  toolUsage: AVAILABLE_MODELS.filter((m) =>
+    m.capabilities.includes("Tool Usage")
   ),
   powerful: [
     AVAILABLE_MODELS.find((m) => m.id === "openai/gpt-4o")!,
     AVAILABLE_MODELS.find((m) => m.id === "anthropic/claude-3.5-sonnet")!,
   ].filter(Boolean),
-  costEffective: AVAILABLE_MODELS.filter(
-    (m) => m.capabilities.includes("Cost-effective") || m.free
+  costEffective: AVAILABLE_MODELS.filter((m) => m.free),
+  toolStreaming: AVAILABLE_MODELS.filter((m) =>
+    m.capabilities.includes("Tool Streaming")
   ),
-  coding: AVAILABLE_MODELS.filter((m) => m.capabilities.includes("Code")),
   vision: getModelsWithImages(),
-  longContext: AVAILABLE_MODELS.filter((m) =>
-    m.capabilities.includes("Long context")
+  objectGeneration: AVAILABLE_MODELS.filter((m) =>
+    m.capabilities.includes("Object Generation")
   ),
 };
