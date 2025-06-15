@@ -34,20 +34,27 @@ const updateConversationSchema = z.object({
 
 const addMessageSchema = z.object({
   conversationId: z.string(),
+  aiMessageId: z.string().min(1, "AI Message ID is required"),
   role: z.enum(["user", "assistant", "system"]),
   content: z.string().min(1),
   sequenceNumber: z.number().int(),
   metadata: z
     .object({
-      timestamp: z.date().default(() => new Date()),
-      model: z.string().optional(),
-      tokens: z
+      tokenUsage: z
         .object({
           prompt: z.number().optional(),
           completion: z.number().optional(),
           total: z.number().optional(),
         })
         .optional(),
+      model: z.string().optional(),
+      temperature: z.number().optional(),
+      maxTokens: z.number().optional(),
+      responseTime: z.number().optional(),
+      reasoning: z.boolean().optional(),
+      timestamp: z.string().optional(),
+      userAgent: z.string().optional(),
+      ipAddress: z.string().optional(),
     })
     .optional(),
 });
@@ -140,8 +147,6 @@ export const conversationsRouter = createTRPCRouter({
           id,
           title,
           model: modelId,
-          temperature: settings?.temperature ?? 0.7,
-          maxTokens: settings?.maxTokens ?? 4000,
           userId: ctx.session.user.id,
         })
         .returning();
@@ -176,10 +181,6 @@ export const conversationsRouter = createTRPCRouter({
 
       if (title) updateData.title = title;
       if (modelId) updateData.model = modelId;
-      if (settings) {
-        updateData.temperature = settings.temperature;
-        updateData.maxTokens = settings.maxTokens;
-      }
 
       const result = await ctx.db
         .update(conversations)
@@ -259,7 +260,14 @@ export const conversationsRouter = createTRPCRouter({
   addMessage: protectedProcedure
     .input(addMessageSchema)
     .mutation(async ({ ctx, input }) => {
-      const { conversationId, role, content, sequenceNumber, metadata } = input;
+      const {
+        conversationId,
+        aiMessageId,
+        role,
+        content,
+        sequenceNumber,
+        metadata,
+      } = input;
 
       const conversation = await ctx.db
         .select()
@@ -281,11 +289,12 @@ export const conversationsRouter = createTRPCRouter({
       const result = await ctx.db
         .insert(messages)
         .values({
+          aiMessageId,
           conversationId,
           role,
           content,
           sequenceNumber,
-          metadata: metadata ? JSON.stringify(metadata) : {},
+          metadata,
         })
         .returning();
 

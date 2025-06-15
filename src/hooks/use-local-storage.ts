@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import type { Message } from "ai";
 
 /**
  * Custom hook for managing localStorage with TypeScript support
@@ -58,10 +59,7 @@ export function useLocalStorage<T>(
 /**
  * Hook specifically for managing guest conversations in localStorage
  */
-export interface GuestMessage {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
+export interface GuestMessage extends Message {
   timestamp: number;
 }
 

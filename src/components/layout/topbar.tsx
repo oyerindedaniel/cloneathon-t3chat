@@ -23,6 +23,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSidebar } from "@/components/ui/sidebar";
 import { ModeToggler } from "@/components/mode-toggler";
 import { useSettingsDialog } from "@/hooks/use-settings-dialog";
+import { ShortcutBadge } from "@/components/ui/shortcut-badge";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 interface TopbarProps {
   user?: {
@@ -36,6 +38,12 @@ export function Topbar({ user }: TopbarProps) {
   const { signOut } = useAuth();
   const { toggleSidebar } = useSidebar();
   const { openSettings } = useSettingsDialog();
+  const { getShortcutDisplay, shortcuts } = useKeyboardShortcuts();
+
+  const settingsShortcut = shortcuts.find(
+    (s) => s.description === "Open settings"
+  );
+  const apiKeysShortcut = shortcuts.find((s) => s.description === "API keys");
 
   const userInitials = user?.name
     ? user.name
@@ -110,19 +118,35 @@ export function Topbar({ user }: TopbarProps) {
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
-                  className="gap-2 cursor-pointer"
+                  className="gap-2 cursor-pointer justify-between"
                   onClick={() => openSettings("settings")}
                 >
-                  <Settings className="w-4 h-4 text-foreground-subtle" />
-                  Settings
+                  <div className="flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-foreground-subtle" />
+                    Settings
+                  </div>
+                  {settingsShortcut && (
+                    <ShortcutBadge
+                      shortcut={getShortcutDisplay(settingsShortcut)}
+                      size="sm"
+                    />
+                  )}
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
-                  className="gap-2 cursor-pointer"
+                  className="gap-2 cursor-pointer justify-between"
                   onClick={() => openSettings("api-keys")}
                 >
-                  <Key className="w-4 h-4 text-foreground-subtle" />
-                  API Keys
+                  <div className="flex items-center gap-2">
+                    <Key className="w-4 h-4 text-foreground-subtle" />
+                    API Keys
+                  </div>
+                  {apiKeysShortcut && (
+                    <ShortcutBadge
+                      shortcut={getShortcutDisplay(apiKeysShortcut)}
+                      size="sm"
+                    />
+                  )}
                 </DropdownMenuItem>
 
                 <DropdownMenuItem className="gap-2 cursor-pointer">

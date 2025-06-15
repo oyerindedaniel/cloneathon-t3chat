@@ -22,6 +22,8 @@ import { useChatContext } from "@/contexts/chat-context";
 import { ConversationSearch } from "../conversations/conversation-search";
 import { useGuestStorage } from "@/hooks/use-local-storage";
 import { useAuth } from "@/hooks/use-auth";
+import { ShortcutBadge } from "@/components/ui/shortcut-badge";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
 export function ConversationsSidebar() {
   const { id: currentId } = useParams<{ id: string }>();
@@ -29,6 +31,7 @@ export function ConversationsSidebar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const { isAuthenticated } = useAuth();
+  const { getShortcutDisplay, shortcuts } = useKeyboardShortcuts();
 
   const { conversations, isLoading, deleteConversation, updateConversation } =
     useConversations();
@@ -47,6 +50,8 @@ export function ConversationsSidebar() {
         updatedAt: new Date(conv.updatedAt),
       }))
     : conversations;
+
+  const newChatShortcut = shortcuts.find((s) => s.description === "New chat");
 
   const handleNewConversation = () => {
     navigate("/conversations");
@@ -111,11 +116,19 @@ export function ConversationsSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={handleNewConversation}
-                  className="h-10 bg-primary rounded-3xl text-white hover:bg-primary-hover auth-surface border-primary/20 font-mono"
+                  className="h-10 bg-primary rounded-3xl text-white hover:bg-primary-hover auth-surface border-primary/20 font-mono justify-between"
                   size="lg"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>New Chat</span>
+                  <div className="flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    <span>New Chat</span>
+                  </div>
+                  {newChatShortcut && (
+                    <ShortcutBadge
+                      shortcut={getShortcutDisplay(newChatShortcut)}
+                      className="opacity-70"
+                    />
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

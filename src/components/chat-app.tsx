@@ -14,10 +14,10 @@ import LoginPage from "@/pages/auth/login-page";
 import SignupPage from "@/pages/auth/signup-page";
 import ConversationsPage from "@/pages/conversations/conversations-page";
 import ChatPage from "@/pages/conversations/chat-page";
-import { ModeToggler } from "./mode-toggler";
 import { ThemeProvider } from "./theme-provider";
 import { ChatProvider } from "@/contexts/chat-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 
 function ConversationsWrapper() {
   const { user } = useAuth();
@@ -41,6 +41,7 @@ export default function ChatApp() {
         >
           <TooltipProvider>
             <ChatProvider>
+              <KeyboardShortcuts />
               <Routes>
                 <Route
                   path="/"
@@ -53,7 +54,6 @@ export default function ChatApp() {
                   <Route path=":id" element={<ChatPage />} />
                 </Route>
               </Routes>
-              {/* <ModeToggler /> */}
             </ChatProvider>
           </TooltipProvider>
         </ThemeProvider>

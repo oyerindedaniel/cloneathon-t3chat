@@ -93,6 +93,10 @@
   --message-failed: oklch(0.6 0.2 25);
   --message-highlight: oklch(0.9 0.1 60);
 
+  --connection-success: oklch(0.65 0.18 145);
+  --connection-error: oklch(0.55 0.22 25);
+  --connection-resuming: oklch(0.7 0.15 220);
+
   --syntax-keyword: oklch(0.55 0.15 280);
   --syntax-string: oklch(0.6 0.15 145);
   --syntax-number: oklch(0.65 0.15 30);
@@ -168,6 +172,10 @@
   --message-failed: oklch(0.5 0.2 25);
   --message-highlight: oklch(0.35 0.1 60);
 
+  --connection-success: oklch(0.65 0.18 145);
+  --connection-error: oklch(0.55 0.22 25);
+  --connection-resuming: oklch(0.7 0.15 220);
+
   --syntax-keyword: oklch(0.7 0.15 280);
   --syntax-string: oklch(0.75 0.15 145);
   --syntax-number: oklch(0.8 0.15 30);
@@ -233,6 +241,10 @@
   --color-message-sent: var(--message-sent);
   --color-message-failed: var(--message-failed);
   --color-message-highlight: var(--message-highlight);
+
+  --color-connection-success: var(--connection-success);
+  --color-connection-error: var(--connection-error);
+  --color-connection-resuming: var(--connection-resuming);
 
   --color-syntax-keyword: var(--syntax-keyword);
   --color-syntax-string: var(--syntax-string);

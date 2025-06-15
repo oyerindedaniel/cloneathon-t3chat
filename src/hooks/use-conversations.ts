@@ -74,3 +74,26 @@ export function useConversations() {
     refetch: conversations.refetch,
   };
 }
+
+export function useConversation(id?: string) {
+  const session = useSession();
+
+  const conversation = api.conversations.getById.useQuery(
+    { id: id! },
+    {
+      enabled: !!id && !!session?.userId,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      retry: 1,
+    }
+  );
+
+  return {
+    conversation: conversation.data,
+    isLoading: conversation.isLoading,
+    isError: conversation.isError,
+    error: conversation.error,
+    status: conversation.status,
+  };
+}

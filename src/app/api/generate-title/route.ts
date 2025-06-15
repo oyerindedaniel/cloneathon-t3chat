@@ -3,7 +3,7 @@ import { generateText } from "ai";
 import { getSession } from "@/server/auth/session";
 import { TITLE_GENERATION_MODEL } from "@/lib/ai/models";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!,
