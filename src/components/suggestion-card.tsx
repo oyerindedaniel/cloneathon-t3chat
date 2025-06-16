@@ -23,7 +23,7 @@ export function SuggestionCard({
       variant="outline"
       className={cn(
         "h-auto p-4 text-left justify-start group transition-all duration-200",
-        "hover:border-primary/20 hover:bg-red-600",
+        "hover:border-primary/20 hover:bg-primary/10",
         "focus-visible:border-primary/30 focus-visible:bg-primary/10",
         className
       )}

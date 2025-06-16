@@ -98,7 +98,7 @@ export function Topbar({ user }: TopbarProps) {
                 </Button>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="end" className="w-56 font-sans">
+              <DropdownMenuContent align="end" className="w-64 font-sans">
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium text-foreground-default">

@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { SendHorizontal, Sparkles, ImagePlus } from "lucide-react";
+import { SendHorizontal, Sparkles, ImagePlus, Globe2 } from "lucide-react";
 import { GridCross } from "@/components/ui/grid-cross";
 import { ModelSelector } from "@/components/model-selector";
 import { SuggestionCard } from "@/components/suggestion-card";
@@ -12,7 +12,6 @@ import { useChatContext } from "@/contexts/chat-context";
 import { useUncontrolledInputEmpty } from "@/hooks/use-uncontrolled-input-empty";
 
 export default function ConversationsPage() {
-  const [message, setMessage] = useState("");
   const [inputRef, isEmpty] = useUncontrolledInputEmpty();
 
   const {
@@ -30,24 +29,31 @@ export default function ConversationsPage() {
 
   const isAtLimit = isGuest && !canSendMessage;
 
+  const effectiveDisabled = isCreatingConversation || isAtLimit;
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
 
-      if (!message.trim() || isCreatingConversation || isAtLimit) return;
+      if (!inputRef.current) return;
+
+      const message = inputRef.current.value;
+
+      if (!message || !message.trim() || isCreatingConversation || isAtLimit)
+        return;
 
       const messageToSend = message.trim();
-      setMessage("");
+
+      inputRef.current.value = "";
 
       try {
         await startNewConversationInstant(messageToSend, selectedModel);
       } catch (error) {
         console.error("Failed to start conversation:", error);
-        setMessage(messageToSend);
+        inputRef.current.value = messageToSend;
       }
     },
     [
-      message,
       selectedModel,
       startNewConversationInstant,
       isCreatingConversation,
@@ -71,8 +77,8 @@ export default function ConversationsPage() {
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
-      if (!isAtLimit) {
-        setMessage(suggestion);
+      if (!isAtLimit && inputRef.current) {
+        inputRef.current.value = suggestion;
       }
     },
     [isAtLimit]
@@ -83,7 +89,10 @@ export default function ConversationsPage() {
     console.log("Image attach clicked");
   };
 
-  const effectiveDisabled = isCreatingConversation || isAtLimit;
+  const handleWebSearchToggle = () => {
+    // This will be implemented when chat-context is updated
+    console.log("Web search toggle clicked");
+  };
 
   return (
     <div className="h-full flex flex-col grid-pattern-background">
@@ -128,7 +137,7 @@ export default function ConversationsPage() {
                 <div className="flex items-center gap-2 w-full">
                   <Input
                     ref={inputRef}
-                    defaultValue={message}
+                    defaultValue={""}
                     onKeyDown={handleKeyDown}
                     placeholder={
                       isAtLimit
@@ -162,6 +171,18 @@ export default function ConversationsPage() {
                     disabled={effectiveDisabled}
                     variant="compact"
                   />
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="w-9 h-9 shrink-0 rounded-full"
+                    onClick={handleWebSearchToggle}
+                    disabled={effectiveDisabled}
+                    aria-label="Toggle web search"
+                  >
+                    <Globe2 className="w-4 h-4" />
+                  </Button>
 
                   <Button
                     type="button"

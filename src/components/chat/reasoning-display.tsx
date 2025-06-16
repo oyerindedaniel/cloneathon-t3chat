@@ -8,7 +8,7 @@ import { useClipboard } from "@/hooks/use-clipboard";
 interface ReasoningDisplayProps {
   reasoning?: string;
   isStreaming?: boolean;
-  className?: string;
+  className?: React.HTMLAttributes<HTMLDivElement>["className"];
 }
 
 export function ReasoningDisplay({

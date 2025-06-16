@@ -2,6 +2,8 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/server/db";
 import * as schema from "@/server/db/schema";
+import { getBaseUrl } from "@/lib/utils/app";
+import { nextCookies } from "better-auth/next-js";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -17,27 +19,19 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
-    requireEmailVerification: false, // Set to true if you want email verification
+    requireEmailVerification: false,
   },
 
   socialProviders: {
     github: {
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-      redirectURI: `${
-        process.env.NODE_ENV === "production"
-          ? process.env.NEXTAUTH_URL || "http://localhost:3000"
-          : "http://localhost:3000"
-      }/api/auth/callback/github`,
+      redirectURI: `${getBaseUrl()}/api/auth/callback/github`,
     },
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      redirectURI: `${
-        process.env.NODE_ENV === "production"
-          ? process.env.NEXTAUTH_URL || "http://localhost:3000"
-          : "http://localhost:3000"
-      }/api/auth/callback/google`,
+      redirectURI: `${getBaseUrl()}/api/auth/callback/google`,
       scope: ["openid", "email", "profile"],
     },
   },
@@ -79,9 +73,6 @@ export const auth = betterAuth({
   },
 
   // Security headers
-  trustedOrigins: [
-    process.env.NODE_ENV === "production"
-      ? process.env.NEXTAUTH_URL || "http://localhost:3000"
-      : "http://localhost:3000",
-  ],
+  trustedOrigins: [getBaseUrl()],
+  plugins: [nextCookies()],
 });

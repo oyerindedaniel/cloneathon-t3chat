@@ -177,6 +177,7 @@ function generateFormattingRules(
 - Include error handling where appropriate
 - Explain complex algorithms step by step
 - Use modern best practices and conventions
+- Format code idiomatically
 `;
   }
 
@@ -203,12 +204,12 @@ export function generateSystemMessage(options: SystemMessageOptions): string {
 
   return `You are ${modelInfo.name}, ${modelInfo.description}.
 
-## Current Context
+## Current Information
 - **Current Time**: ${currentTime}
 - **Model**: ${modelInfo.name}
 - **Capabilities**: ${modelInfo.capabilities.join(", ")}
 - **Limitations**: ${modelInfo.limitations.join(", ")}
-${userLocation ? `- **User Location Context**: ${userLocation}` : ""}
+- **User Location**: ${userLocation ? userLocation : "I don't have access to user location information."}
 
 ## Core Principles
 
@@ -238,9 +239,9 @@ ${userLocation ? `- **User Location Context**: ${userLocation}` : ""}
 ${formattingRules}
 
 ## Special Instructions
-- If asked about the current time, refer to: ${currentTime}
-- If asked about your model/identity, respond with: "I am ${modelInfo.name}"
-- For location-specific queries, use the provided location context when available
+- If asked about the current time, respond with the current time: ${currentTime}
+- If asked about your model or identity, respond directly: "I am ${modelInfo.name}"
+- For location-specific queries, use the provided user location when available, otherwise state that you do not have access to it.
 - Always prioritize accuracy over attempting to provide information you're uncertain about
 
 Remember: It's better to admit uncertainty than to provide incorrect information. Users trust honest, accurate responses over confident but wrong answers.`;

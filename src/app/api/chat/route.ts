@@ -8,7 +8,9 @@ import {
   appendResponseMessages,
   appendClientMessage,
   createIdGenerator,
+  tool,
 } from "ai";
+import { z } from "zod";
 import { getSession } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { conversations, messages, type NewMessage } from "@/server/db/schema";
@@ -197,6 +199,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const chatId = searchParams.get("chatId");
 
+    console.log("chatId-------------------------------------", chatId);
+
     if (!chatId) {
       return new Response("chatId is required", { status: 400 });
     }
@@ -301,6 +305,68 @@ export async function POST(req: Request) {
       apiKey,
     });
 
+    const webSearchTool = tool({
+      description: "Search the web for information using a search engine.",
+      parameters: z.object({
+        query: z.string().describe("The search query for the web search."),
+      }),
+      execute: async ({ query }) => {
+        const GOOGLE_API_KEY = process.env.GOOGLE_SEARCH_API_KEY;
+        const GOOGLE_CX = process.env.GOOGLE_SEARCH_ENGINE_ID;
+
+        if (!GOOGLE_API_KEY || !GOOGLE_CX) {
+          console.error(
+            "Google Custom Search API key or Engine ID is not configured."
+          );
+          return {
+            error:
+              "Web search is not configured. Please set GOOGLE_SEARCH_API_KEY and GOOGLE_SEARCH_ENGINE_ID.",
+          };
+        }
+
+        try {
+          const response = await fetch(
+            `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(
+              query
+            )}`,
+            {
+              method: "GET",
+              headers: {
+                Accept: "application/json",
+              },
+            }
+          );
+
+          if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(
+              `Google Search API error: ${response.status} - ${errorBody}`
+            );
+            return {
+              error: `Failed to fetch search results: ${response.statusText}`,
+            };
+          }
+
+          const data = await response.json();
+
+          if (data.items && Array.isArray(data.items)) {
+            return {
+              results: data.items.map((item: any) => ({
+                title: item.title,
+                url: item.link,
+                snippet: item.snippet,
+              })),
+            };
+          } else {
+            return { results: [] };
+          }
+        } catch (error) {
+          console.error("Error during web search execution:", error);
+          return { error: "An unexpected error occurred during web search." };
+        }
+      },
+    });
+
     let previousMessages: Message[] = [];
 
     if (isAuthenticated && conversationId && session?.user?.id) {
@@ -400,6 +466,9 @@ export async function POST(req: Request) {
           maxTokens: 1000,
           experimental_transform: smoothStream(),
           experimental_generateMessageId: serverMessageIdGenerator,
+          toolChoice: 'auto',
+          // tools: webSearchEnabled ? { webSearch: webSearchTool } : undefined, // Conditionally enable web search
+          // maxSteps: webSearchEnabled ? 5 : 1, // Allow multi-step if web search is enabled
           ...(supportsReasoning(modelId) && {
             reasoning: {
               effort: "high",
@@ -413,6 +482,17 @@ export async function POST(req: Request) {
               errorInfo.title,
               errorInfo.message
             );
+          },
+          onChunk: (event) => {
+
+            if(event.chunk.type === "text-delta"){
+              console.log("----------------------text",event.chunk.textDelta)
+            }
+
+            if(event.chunk.type === "reasoning"){
+              console.log("----------------------reasoning", event.chunk.textDelta)
+            }
+
           },
           onFinish: async ({ response, usage }) => {
             if (isAuthenticated && conversationId && session?.user?.id) {
@@ -443,7 +523,12 @@ export async function POST(req: Request) {
           },
         });
 
-        result.mergeIntoDataStream(dataStream);
+                      
+ result.consumeStream()
+
+            result.mergeIntoDataStream(dataStream, {
+                sendReasoning: true
+            });
       },
     });
 

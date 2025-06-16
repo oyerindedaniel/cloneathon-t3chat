@@ -49,9 +49,18 @@ export function useAutoScroll(options: UseAutoScrollOptions = {}) {
 
   // Scroll to the end of messages (for regular scrolling)
   const scrollToEnd = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: smooth ? "smooth" : "instant",
-    });
+    const messageElement = lastMessageRef.current || undefined;
+
+    if (messageElement) {
+      window.scrollTo({
+        top: messageElement.offsetTop - 16,
+        behavior: smooth ? "smooth" : "instant",
+      });
+    } else {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: smooth ? "smooth" : "instant",
+      });
+    }
   }, [smooth]);
 
   // Create temporary space to allow scrolling
@@ -81,16 +90,16 @@ export function useAutoScroll(options: UseAutoScrollOptions = {}) {
 
       if (!messageElement) return;
 
-      const actualTopbarHeight =
-        parseInt(
-          getComputedStyle(document.documentElement).getPropertyValue(
-            "--topbar-height"
-          )
-        ) || topbarHeight;
+      const cssValue = getComputedStyle(
+        document.documentElement
+      ).getPropertyValue("--topbar-height");
+      const actualTopbarHeight = parseInt(cssValue) * 16 || topbarHeight;
 
-      const questionElement = messageElement.querySelector(
-        '[data-role="user"]'
-      ) as HTMLElement;
+      const questionElement = (
+        messageElement.dataset.role === "user"
+          ? messageElement
+          : messageElement.querySelector('[data-role="user"]')
+      ) as HTMLElement | null;
 
       if (questionElement) {
         const questionHeight = questionElement.offsetHeight;
@@ -141,7 +150,7 @@ export function useAutoScroll(options: UseAutoScrollOptions = {}) {
             });
           } else {
             window.scrollTo({
-              top: messageElement.offsetTop - actualTopbarHeight - 16,
+              top: messageElement.offsetTop - 16,
               behavior: smooth ? "smooth" : "instant",
             });
           }
@@ -191,6 +200,11 @@ export function useAutoScroll(options: UseAutoScrollOptions = {}) {
     if (messages.length > prevMessagesLength.current) {
       const lastMessage = messages[messages.length - 1];
       const isNewUserMessage = lastMessage?.role === "user";
+      const isNewAssistantMessage = lastMessage?.role === "assistant";
+
+      if (isNewAssistantMessage && isStreaming) {
+        return;
+      }
 
       handleNewMessage(isNewUserMessage);
 

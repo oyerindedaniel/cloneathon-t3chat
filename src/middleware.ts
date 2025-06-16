@@ -2,41 +2,30 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/server/auth/config";
 
-const protectedRoutes = ["/api/conversations", "/api/messages", "/api/user"];
+const protectedRoutes: string[] = [];
 
 const authRoutes = ["/login", "/signup"];
 
-const guestAccessibleRoutes = [
-  "/conversations",
-  "/api/chat",
-  "/api/generate-title",
-];
+const guestAccessibleRoutes = ["/conversations"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  if (pathname.startsWith("/api/auth/") || pathname.startsWith("/_next/")) {
-    return NextResponse.next();
-  }
 
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
 
-  const isAuthRoute = authRoutes.some((route) => pathname === route);
-
+  const isAuthRoute = authRoutes.includes(pathname);
   const isGuestAccessible = guestAccessibleRoutes.some((route) =>
     pathname.startsWith(route)
   );
-
-  if (!isProtectedRoute && !isAuthRoute) {
-    return NextResponse.next();
-  }
 
   try {
     const session = await auth.api.getSession({
       headers: request.headers,
     });
+
+    // console.log("------------------------------middleware", session);
 
     const isAuthenticated = !!session?.user;
 
@@ -44,7 +33,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/conversations", request.url));
     }
 
-    if (isProtectedRoute && !isAuthenticated) {
+    if (isProtectedRoute && !isAuthenticated && !isGuestAccessible) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
@@ -52,11 +41,12 @@ export async function middleware(request: NextRequest) {
 
     return NextResponse.next();
   } catch (error) {
+    console.log("------------------------------middleware error", error);
     console.error("Middleware auth error:", error);
 
     if (isProtectedRoute && !isGuestAccessible) {
       // Check if this might be a temporary database issue
-      // by looking at the error message
+
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
@@ -68,18 +58,7 @@ export async function middleware(request: NextRequest) {
           "Database connectivity issue in middleware, allowing request to proceed"
         );
 
-        const criticalRoutes = [
-          "/api/user",
-          "/api/conversations",
-          "/api/messages",
-        ];
-        const isCriticalRoute = criticalRoutes.some((route) =>
-          pathname.startsWith(route)
-        );
-
-        if (isCriticalRoute) {
-          return NextResponse.redirect(new URL("/login", request.url));
-        }
+        return NextResponse.redirect(new URL("/conversations", request.url));
       } else {
         return NextResponse.redirect(new URL("/login", request.url));
       }
@@ -90,5 +69,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|public/).*)"],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.json).*)",
+  ],
 };

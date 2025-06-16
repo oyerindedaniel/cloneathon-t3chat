@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { auth } from '@/server/auth/config';
+import { BetterAuthSessionProvider } from "@/components/better-auth-session-provider";
+import { headers } from 'next/headers';
 
 import "./globals.css";
 import "./syntax-highlighter.css";
@@ -21,17 +24,28 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const allHeaders = await headers();
+  const requestHeaders = new Headers();
+  for (const [key, value] of allHeaders.entries()) {
+    requestHeaders.append(key, value);
+  }
+  const session = await auth.api.getSession({ headers: requestHeaders });
+
+  console.log("better auth session---------", session);
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <BetterAuthSessionProvider initialSession={session}>
+          {children}
+        </BetterAuthSessionProvider>
       </body>
     </html>
   );

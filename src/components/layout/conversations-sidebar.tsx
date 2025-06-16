@@ -38,6 +38,8 @@ export function ConversationsSidebar() {
 
   const guestStorage = useGuestStorage();
 
+  // console.log("------------------------------", guestStorage);
+
   const { switchToConversation } = useChatContext();
 
   const isGuest = !isAuthenticated;

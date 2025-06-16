@@ -12,12 +12,16 @@ import { useConversation } from "@/hooks/use-conversations";
 import { api } from "@/trpc/react";
 import { DEFAULT_MODEL } from "@/lib/ai/models";
 import { useNavigate } from "react-router-dom";
-import { Message } from "ai";
+import { Message as AIMessage } from "ai";
 import { v4 as uuidv4 } from "uuid";
 import { flushSync } from "react-dom";
 import { UseChatHelpers } from "@ai-sdk/react";
 import { useGuestStorage } from "@/hooks/use-local-storage";
 import { useAutoResume } from "@/hooks/use-auto-resume";
+import {
+  type Conversation,
+  type Message as DBMessage,
+} from "@/server/db/schema";
 
 interface ChatContextType extends UseChatHelpers {
   selectedModel: string;
@@ -37,6 +41,8 @@ interface ChatContextType extends UseChatHelpers {
   remainingMessages: number;
   totalMessages: number;
   maxMessages: number;
+  isWebSearchEnabled: boolean;
+  toggleWebSearch: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -47,18 +53,24 @@ const messageIdGenerator = createIdGenerator({
 });
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const userId = user?.id;
   const navigate = useNavigate();
   const [currentConversationId, setCurrentConversationId] = useState<
     string | null
   >(null);
+
   const previousTitleRef = useRef<string | null>(null);
   const [selectedModel, setSelectedModelState] = useState(DEFAULT_MODEL.id);
   const [isNavigatingToNewChat, setIsNavigatingToNewChat] = useState(false);
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
+  const isFirstConversation = useRef(false);
 
   const guestStorage = useGuestStorage();
   const isGuest = !isAuthenticated;
+
+  // console.log("------------------------------", userId, isAuthenticated);
 
   const utils = api.useUtils();
   const updateTitle = api.conversations.updateTitle.useMutation();
@@ -67,15 +79,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     currentConversationId || undefined
   );
 
-  // Use AI SDK completion for title generation
+
+
   const titleCompletion = useCompletion({
     api: "/api/generate-title",
+    onFinish: (result) => {
+      isFirstConversation.current = false;
+    },
     onError: (error) => {
       console.error("Title generation failed:", error);
     },
   });
 
-  const initialMessages: Message[] = React.useMemo(() => {
+  const initialMessages: AIMessage[] = React.useMemo(() => {
     if (isGuest && currentConversationId) {
       const guestConversation = guestStorage.getConversation(
         currentConversationId
@@ -93,7 +109,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     if (conversation?.messages) {
       return conversation.messages.map((msg) => ({
         id: msg.aiMessageId,
-        role: msg.role as Message["role"],
+        role: msg.role as AIMessage["role"],
         content: msg.content,
         createdAt: new Date(msg.createdAt),
       }));
@@ -103,7 +119,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [conversation, currentConversationId, isGuest, guestStorage]);
 
   const generateTitle = useCallback(
-    async (messages: Message[]): Promise<string | null> => {
+    async (messages: AIMessage[]): Promise<string | null> => {
       try {
         const result = await titleCompletion.complete("", {
           body: { messages },
@@ -119,12 +135,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateConversationTitle = useCallback(
-    async (conversationId: string, messages: Message[]) => {
+    async (conversationId: string, messages: AIMessage[]) => {
       if (!conversationId || messages.length === 0) return;
+
+      const newTitle = await generateTitle(messages);
 
       try {
         if (isGuest) {
-          const newTitle = await generateTitle(messages);
+        
           if (newTitle) {
             guestStorage.updateConversation(conversationId, {
               title: newTitle,
@@ -136,7 +154,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           });
           previousTitleRef.current = currentConversation?.title || null;
 
-          const newTitle = await generateTitle(messages);
           if (!newTitle) return;
 
           utils.conversations.getById.setData({ id: conversationId }, (old) =>
@@ -178,6 +195,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       };
     },
     onResponse: async (response) => {
+      if(conversation && conversation.messages.length > 0) {
+        isFirstConversation.current = false;
+      }
       if (!response.ok) {
         const errorText = await response.text();
         console.log("Chat API error in context:", response.status, errorText);
@@ -185,7 +205,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
     },
     onFinish: async (message) => {
-      if (currentConversationId && chat.messages.length >= 2) {
+      if (currentConversationId) {
         if (isGuest) {
           guestStorage.addMessage(currentConversationId, {
             id: message.id,
@@ -194,10 +214,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           });
         }
 
-        await updateConversationTitle(currentConversationId, [
-          ...chat.messages,
-          message,
-        ]);
+        if (isFirstConversation.current) {
+          await updateConversationTitle(currentConversationId, [
+            ...chat.messages,
+            message,
+          ]);
+        }
+
+       
       }
     },
     onError: (error) => {
@@ -249,6 +273,47 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             role: "user",
             content: message,
           });
+        } else if (userId) {
+          const newConversation: Conversation & {
+            lastMessage: DBMessage | null;
+          } = {
+            id: conversationId,
+            title: initialTitle,
+            model: effectiveModelId,
+            userId: userId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            lastMessageAt: null,
+            totalMessages: 0,
+            parentConversationId: null,
+            branchPointMessageId: null,
+            branchLevel: 0,
+            branchStatus: "active",
+            isShared: false,
+            shareId: null,
+            lastMessage: null, // Explicitly set to null
+          };
+
+          // utils.conversations.getAll.setData(undefined, (old) => {
+          //   const newConversation = {
+          //     id: crypto.randomUUID(),
+          //     userId: "some-user-id",
+          //     title: "New Chat",
+          //     model: "some-model",
+          //     lastMessageAt: null,
+          //     createdAt: new Date(),
+          //     totalMessages: 0,
+          //     branchLevel: 0,
+          //     branchStatus: "active",
+          //     isShared: false,
+          //     lastMessage: null,
+          //   };
+          //   if (old) {
+          //     return [newConversation, ...old] as typeof old;
+          //   } else {
+          //     return [newConversation] as typeof old;
+          //   }
+          // });
         }
 
         chat.setMessages([]);
@@ -262,7 +327,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setIsCreatingConversation(false);
       }
     },
-    [selectedModel, navigate, chat, isGuest, guestStorage]
+    [selectedModel, navigate, chat, isGuest, guestStorage, utils, userId]
   );
 
   const switchToConversation = useCallback(
@@ -320,6 +385,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     remainingMessages: isGuest ? guestStorage.getRemainingMessages() : Infinity,
     totalMessages: isGuest ? guestStorage.totalMessages : 0,
     maxMessages: isGuest ? guestStorage.maxMessages : Infinity,
+    isWebSearchEnabled,
+    toggleWebSearch: () => setIsWebSearchEnabled((prev) => !prev),
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

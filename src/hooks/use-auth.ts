@@ -1,5 +1,13 @@
 import { useRouter } from "next/navigation";
 import { authClient, type Session, type User } from "@/lib/auth-client";
+import { useBetterAuthSession } from "@/components/better-auth-session-provider";
+import { useEffect, useState } from "react";
+
+// The type for the combined session and user data as returned by better-auth
+type BetterAuthCombinedSession = {
+  session: Session;
+  user: User;
+} | null; // Can be null if not authenticated
 
 /**
  * Custom hook for authentication state and actions
@@ -8,8 +16,21 @@ import { authClient, type Session, type User } from "@/lib/auth-client";
 export function useAuth() {
   const router = useRouter();
 
-  // Get session data using Better Auth's useSession hook
-  const { data: session, isPending, error, refetch } = authClient.useSession();
+  const initialSession = useBetterAuthSession();
+
+  
+  const [sessionData, setSessionData] = useState<BetterAuthCombinedSession>(initialSession);
+
+
+  const { data: clientSessionData, isPending, error, refetch } = authClient.useSession();
+
+
+  useEffect(() => {
+    if (clientSessionData !== undefined) {
+      console.log("clientSessionData---------", clientSessionData);
+      setSessionData(clientSessionData);
+    }
+  }, [clientSessionData]);
 
   /**
    * Sign up a new user with email and password
@@ -142,11 +163,11 @@ export function useAuth() {
 
   return {
     // Session state
-    session,
-    user: session?.user,
+    session: sessionData?.session,
+    user: sessionData?.user,
     isLoading: isPending,
     error,
-    isAuthenticated: !!session?.user,
+    isAuthenticated: !!sessionData?.user,
 
     // Email/Password Actions
     signUp,
@@ -179,7 +200,7 @@ export function useUser(): User | null {
  */
 export function useSession(): Session | null {
   const { session } = useAuth();
-  return session?.session || null;
+  return session || null;
 }
 
 /**

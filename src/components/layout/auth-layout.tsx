@@ -27,7 +27,7 @@ export function AuthLayout({
 }: AuthLayoutProps) {
   return (
     <div className="min-h-screen bg-background-default relative grid-pattern-background py-6">
-      <div className="relative z-10 p-6 flex justify-between items-center">
+      <div className="relative z-10 p-6 flex justify-between items-center bg-transparent">
         <Link
           to="/conversations"
           className="inline-flex items-center gap-2 text-foreground-muted hover:text-foreground-default transition-colors group font-sans"
@@ -35,7 +35,7 @@ export function AuthLayout({
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           <span className="text-sm font-medium">Back to home</span>
         </Link>
-        <ModeToggler />
+        {/* <ModeToggler /> */}
       </div>
 
       <div className="relative z-10 flex items-center justify-center px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-88px)]">

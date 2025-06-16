@@ -2,7 +2,7 @@ import { memo, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SendHorizontal, ImagePlus, Square } from "lucide-react";
+import { SendHorizontal, ImagePlus, Square, Globe2 } from "lucide-react";
 import { ModelSelector } from "@/components/model-selector";
 import { MessageLimitWarning } from "@/components/message-limit-warning";
 import { useUncontrolledInputEmpty } from "@/hooks/use-uncontrolled-input-empty";
@@ -21,6 +21,8 @@ interface ChatInputProps {
   remainingMessages?: number;
   totalMessages?: number;
   maxMessages?: number;
+  isWebSearchEnabled?: boolean;
+  onWebSearchToggle?: () => void;
 }
 
 export const ChatInput = memo(function ChatInput({
@@ -36,6 +38,8 @@ export const ChatInput = memo(function ChatInput({
   remainingMessages = Infinity,
   totalMessages = 0,
   maxMessages = Infinity,
+  isWebSearchEnabled = false,
+  onWebSearchToggle,
 }: ChatInputProps) {
   const isAtLimit = isGuest && remainingMessages === 0;
   const effectiveDisabled = disabled || isAtLimit;
@@ -130,6 +134,24 @@ export const ChatInput = memo(function ChatInput({
               disabled={effectiveDisabled}
               variant="compact"
             />
+
+            {onWebSearchToggle && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "w-9 h-9 shrink-0 rounded-full",
+                  isWebSearchEnabled &&
+                    "bg-accent-primary text-foreground-on-accent"
+                )}
+                onClick={onWebSearchToggle}
+                disabled={effectiveDisabled}
+                aria-label="Toggle web search"
+              >
+                <Globe2 className="w-4 h-4" />
+              </Button>
+            )}
 
             <Button
               type="button"
