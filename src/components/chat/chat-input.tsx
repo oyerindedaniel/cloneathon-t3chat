@@ -1,11 +1,13 @@
 import { memo, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { SendHorizontal, ImagePlus, Square, Globe2 } from "lucide-react";
 import { ModelSelector } from "@/components/model-selector";
 import { MessageLimitWarning } from "@/components/message-limit-warning";
 import { useUncontrolledInputEmpty } from "@/hooks/use-uncontrolled-input-empty";
+import { useAutosizeTextArea } from "@/hooks/use-autosize-textarea";
+import { Textarea } from "@/components/ui/textarea";
+import { useCombinedRefs } from "@/hooks/use-combined-ref";
 
 interface ChatInputProps {
   onSubmit: (message: string) => void;
@@ -44,7 +46,11 @@ export const ChatInput = memo(function ChatInput({
   const isAtLimit = isGuest && remainingMessages === 0;
   const effectiveDisabled = disabled || isAtLimit;
 
-  const [inputRef, isEmpty, _, handleSubmit] = useUncontrolledInputEmpty();
+  const [autosizeRef, resize] = useAutosizeTextArea(130);
+
+  const [emptyRef, isEmpty, _, handleSubmit] = useUncontrolledInputEmpty();
+
+  const textAreaRef = useCombinedRefs(autosizeRef, emptyRef);
 
   const handleFormSubmit = useCallback(
     (e: React.FormEvent<HTMLFormElement>) => {
@@ -57,7 +63,7 @@ export const ChatInput = memo(function ChatInput({
   );
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter" && !e.shiftKey && !effectiveDisabled) {
         e.preventDefault();
         handleSubmit(onSubmit);
@@ -87,8 +93,9 @@ export const ChatInput = memo(function ChatInput({
           )}
         >
           <div className="flex items-center gap-2 w-full">
-            <Input
-              ref={inputRef}
+            <Textarea
+              ref={textAreaRef}
+              onInput={resize}
               onKeyDown={handleKeyDown}
               placeholder={
                 isAtLimit ? "Sign up to continue chatting..." : placeholder
@@ -97,73 +104,76 @@ export const ChatInput = memo(function ChatInput({
               disabled={effectiveDisabled}
               readOnly={effectiveDisabled}
             />
-
-            {disabled && onStop ? (
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="w-9 h-9 shrink-0"
-                onClick={onStop}
-                aria-label="Stop generation"
-              >
-                <Square className="w-4 h-4" />
-              </Button>
-            ) : (
-              <Button
-                type="submit"
-                variant="default"
-                size="icon"
-                className="w-9 h-9 shrink-0"
-                disabled={isEmpty || effectiveDisabled}
-                aria-label="Send message"
-              >
-                {disabled ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <SendHorizontal className="w-4 h-4" />
-                )}
-              </Button>
-            )}
           </div>
 
-          <div className="flex items-center gap-2 w-full">
-            <ModelSelector
-              value={selectedModel}
-              onValueChange={onModelChange}
-              disabled={effectiveDisabled}
-              variant="compact"
-            />
+          <div className="flex items-center gap-8 w-full justify-between">
+            <div className="flex items-center gap-2">
+              <ModelSelector
+                value={selectedModel}
+                onValueChange={onModelChange}
+                disabled={effectiveDisabled}
+                variant="compact"
+              />
 
-            {onWebSearchToggle && (
+              {onWebSearchToggle && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "w-9 h-9 shrink-0 rounded-full",
+                    isWebSearchEnabled &&
+                      "bg-accent-primary text-foreground-on-accent"
+                  )}
+                  onClick={onWebSearchToggle}
+                  disabled={effectiveDisabled}
+                  aria-label="Toggle web search"
+                >
+                  <Globe2 className="w-4 h-4" />
+                </Button>
+              )}
+
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className={cn(
-                  "w-9 h-9 shrink-0 rounded-full",
-                  isWebSearchEnabled &&
-                    "bg-accent-primary text-foreground-on-accent"
-                )}
-                onClick={onWebSearchToggle}
+                className="w-9 h-9 shrink-0 rounded-full"
+                onClick={onImageAttach}
                 disabled={effectiveDisabled}
-                aria-label="Toggle web search"
+                aria-label="Attach image"
               >
-                <Globe2 className="w-4 h-4" />
+                <ImagePlus className="w-4 h-4" />
               </Button>
-            )}
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="w-9 h-9 shrink-0 rounded-full"
-              onClick={onImageAttach}
-              disabled={effectiveDisabled}
-              aria-label="Attach image"
-            >
-              <ImagePlus className="w-4 h-4" />
-            </Button>
+            </div>
+            <>
+              {disabled && onStop ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="w-9 h-9 shrink-0"
+                  onClick={onStop}
+                  aria-label="Stop generation"
+                >
+                  <Square className="w-4 h-4" />
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  variant="default"
+                  size="icon"
+                  className="w-9 h-9 shrink-0"
+                  disabled={isEmpty || effectiveDisabled}
+                  aria-label="Send message"
+                >
+                  {disabled ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <SendHorizontal className="w-4 h-4" />
+                  )}
+                </Button>
+              )}
+            </>
           </div>
         </div>
       </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { memo } from "react";
 import {
   ChevronDown,
   Cpu,
@@ -91,7 +92,7 @@ function ModelItemSkeleton() {
   );
 }
 
-export function ModelSelector({
+export const ModelSelector = memo(function ModelSelector({
   value,
   onValueChange,
   disabled,
@@ -612,4 +613,4 @@ export function ModelSelector({
       </PopoverContent>
     </Popover>
   );
-}
+});

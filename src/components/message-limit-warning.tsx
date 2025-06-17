@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { X, AlertTriangle, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ interface MessageLimitWarningProps {
   className?: React.HTMLAttributes<HTMLDivElement>["className"];
 }
 
-export function MessageLimitWarning({
+export const MessageLimitWarning = memo(function MessageLimitWarning({
   remainingMessages,
   totalMessages,
   maxMessages,
@@ -92,4 +92,4 @@ export function MessageLimitWarning({
       </Button>
     </div>
   );
-}
+});

@@ -1,10 +1,5 @@
-import React, {
-  createContext,
-  useContext,
-  useCallback,
-  useState,
-  useRef,
-} from "react";
+import React, { useCallback, useState, useRef } from "react";
+import { createContext, useContextSelector } from "use-context-selector";
 import { useChat as useAIChat, useCompletion } from "@ai-sdk/react";
 import { createIdGenerator } from "ai";
 import { useAuth } from "@/hooks/use-auth";
@@ -34,6 +29,8 @@ interface ChatContextType extends UseChatHelpers {
   switchToConversation: (conversationId: string, modelId?: string) => void;
   isCreatingConversation: boolean;
   isConversationLoading: boolean;
+  isConversationError: boolean;
+  conversationError: unknown;
   setCurrentConversationId: (conversationId: string) => void;
   isNavigatingToNewChat: boolean;
   isGuest: boolean;
@@ -45,7 +42,7 @@ interface ChatContextType extends UseChatHelpers {
   toggleWebSearch: () => void;
 }
 
-const ChatContext = createContext<ChatContextType | undefined>(undefined);
+const ChatContext = createContext<ChatContextType>(null!);
 
 const messageIdGenerator = createIdGenerator({
   prefix: "msgc",
@@ -70,16 +67,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const guestStorage = useGuestStorage();
   const isGuest = !isAuthenticated;
 
-  // console.log("------------------------------", userId, isAuthenticated);
-
   const utils = api.useUtils();
   const updateTitle = api.conversations.updateTitle.useMutation();
 
-  const { conversation, isLoading: conversationLoading } = useConversation(
-    currentConversationId || undefined
-  );
-
-
+  const {
+    conversation,
+    isLoading: conversationLoading,
+    isError: isConversationError,
+    error: conversationError,
+  } = useConversation(currentConversationId || undefined);
 
   const titleCompletion = useCompletion({
     api: "/api/generate-title",
@@ -142,7 +138,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       try {
         if (isGuest) {
-        
           if (newTitle) {
             guestStorage.updateConversation(conversationId, {
               title: newTitle,
@@ -195,7 +190,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       };
     },
     onResponse: async (response) => {
-      if(conversation && conversation.messages.length > 0) {
+      if (conversation && conversation.messages.length > 0) {
         isFirstConversation.current = false;
       }
       if (!response.ok) {
@@ -220,8 +215,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             message,
           ]);
         }
-
-       
       }
     },
     onError: (error) => {
@@ -327,7 +320,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setIsCreatingConversation(false);
       }
     },
-    [selectedModel, navigate, chat, isGuest, guestStorage, utils, userId]
+    [selectedModel, navigate, chat, isGuest, guestStorage, userId]
   );
 
   const switchToConversation = useCallback(
@@ -387,15 +380,120 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     maxMessages: isGuest ? guestStorage.maxMessages : Infinity,
     isWebSearchEnabled,
     toggleWebSearch: () => setIsWebSearchEnabled((prev) => !prev),
+    isConversationError,
+    conversationError,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 }
 
-export function useChatContext() {
-  const context = useContext(ChatContext);
-  if (context === undefined) {
-    throw new Error("useChatContext must be used within a ChatProvider");
-  }
-  return context;
+export function useChatMessages() {
+  return {
+    messages: useContextSelector(ChatContext, (state) => state.messages),
+    append: useContextSelector(ChatContext, (state) => state.append),
+    setMessages: useContextSelector(ChatContext, (state) => state.setMessages),
+    reload: useContextSelector(ChatContext, (state) => state.reload),
+    stop: useContextSelector(ChatContext, (state) => state.stop),
+    status: useContextSelector(ChatContext, (state) => state.status),
+    error: useContextSelector(ChatContext, (state) => state.error),
+    experimental_resume: useContextSelector(
+      ChatContext,
+      (state) => state.experimental_resume
+    ),
+  };
+}
+
+export function useChatInput() {
+  return {
+    input: useContextSelector(ChatContext, (state) => state.input),
+    handleInputChange: useContextSelector(
+      ChatContext,
+      (state) => state.handleInputChange
+    ),
+    handleSubmit: useContextSelector(
+      ChatContext,
+      (state) => state.handleSubmit
+    ),
+  };
+}
+
+export function useChatControls() {
+  return {
+    currentConversationId: useContextSelector(
+      ChatContext,
+      (state) => state.currentConversationId
+    ),
+    startNewConversationInstant: useContextSelector(
+      ChatContext,
+      (state) => state.startNewConversationInstant
+    ),
+    switchToConversation: useContextSelector(
+      ChatContext,
+      (state) => state.switchToConversation
+    ),
+    setCurrentConversationId: useContextSelector(
+      ChatContext,
+      (state) => state.setCurrentConversationId
+    ),
+    isNavigatingToNewChat: useContextSelector(
+      ChatContext,
+      (state) => state.isNavigatingToNewChat
+    ),
+    isCreatingConversation: useContextSelector(
+      ChatContext,
+      (state) => state.isCreatingConversation
+    ),
+  };
+}
+
+export function useChatConfig() {
+  return {
+    selectedModel: useContextSelector(
+      ChatContext,
+      (state) => state.selectedModel
+    ),
+    setSelectedModel: useContextSelector(
+      ChatContext,
+      (state) => state.setSelectedModel
+    ),
+    isWebSearchEnabled: useContextSelector(
+      ChatContext,
+      (state) => state.isWebSearchEnabled
+    ),
+    toggleWebSearch: useContextSelector(
+      ChatContext,
+      (state) => state.toggleWebSearch
+    ),
+  };
+}
+
+export function useChatSessionStatus() {
+  return {
+    isConversationLoading: useContextSelector(
+      ChatContext,
+      (state) => state.isConversationLoading
+    ),
+    isGuest: useContextSelector(ChatContext, (state) => state.isGuest),
+    canSendMessage: useContextSelector(
+      ChatContext,
+      (state) => state.canSendMessage
+    ),
+    remainingMessages: useContextSelector(
+      ChatContext,
+      (state) => state.remainingMessages
+    ),
+    totalMessages: useContextSelector(
+      ChatContext,
+      (state) => state.totalMessages
+    ),
+    conversationError: useContextSelector(
+      ChatContext,
+      (state) => state.conversationError
+    ),
+    isConversationError: useContextSelector(
+      ChatContext,
+      (state) => state.isConversationError
+    ),
+    maxMessages: useContextSelector(ChatContext, (state) => state.maxMessages),
+  };
 }

@@ -9,6 +9,7 @@ export function ConversationSearch({
 }) {
   return (
     <SidebarInput
+      data-search-input
       placeholder="Search conversations..."
       value={searchQuery}
       onChange={(e) => setSearchQuery(e.target.value)}

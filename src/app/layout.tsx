@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { auth } from '@/server/auth/config';
+import { auth } from "@/server/auth/config";
 import { BetterAuthSessionProvider } from "@/components/better-auth-session-provider";
-import { headers } from 'next/headers';
+import { headers } from "next/headers";
 
 import "./globals.css";
 import "./syntax-highlighter.css";
@@ -40,6 +40,14 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
+      <head>
+        {process.env.NODE_ENV !== "production" && (
+          <script
+            src="https://unpkg.com/react-scan/dist/auto.global.js"
+            async
+          />
+        )}
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,49 +8,63 @@ import { ModelSelector } from "@/components/model-selector";
 import { SuggestionCard } from "@/components/suggestion-card";
 import { MessageLimitWarning } from "@/components/message-limit-warning";
 import { DEFAULT_SUGGESTIONS } from "@/lib/constants/suggestions";
-import { useChatContext } from "@/contexts/chat-context";
+import {
+  useChatConfig,
+  useChatControls,
+  useChatSessionStatus,
+} from "@/contexts/chat-context";
 import { useUncontrolledInputEmpty } from "@/hooks/use-uncontrolled-input-empty";
+import { useAutosizeTextArea } from "@/hooks/use-autosize-textarea";
+import { useCombinedRefs } from "@/hooks/use-combined-ref";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function ConversationsPage() {
-  const [inputRef, isEmpty] = useUncontrolledInputEmpty();
+  const { selectedModel, setSelectedModel } = useChatConfig();
+  const { startNewConversationInstant, isCreatingConversation } =
+    useChatControls();
 
   const {
-    selectedModel,
-    setSelectedModel,
-    startNewConversationInstant,
-    isCreatingConversation,
-
     isGuest,
     canSendMessage,
     remainingMessages,
     totalMessages,
     maxMessages,
-  } = useChatContext();
+  } = useChatSessionStatus();
 
   const isAtLimit = isGuest && !canSendMessage;
 
   const effectiveDisabled = isCreatingConversation || isAtLimit;
 
+  console.log({ effectiveDisabled });
+
+  const [autosizeRef, resize] = useAutosizeTextArea(130);
+
+  const [emptyRef, isEmpty] = useUncontrolledInputEmpty();
+
+  const textAreaRef = useCombinedRefs(autosizeRef, emptyRef);
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
 
-      if (!inputRef.current) return;
+      const inputRef = emptyRef.current;
 
-      const message = inputRef.current.value;
+      if (!inputRef) return;
+
+      const message = inputRef.value;
 
       if (!message || !message.trim() || isCreatingConversation || isAtLimit)
         return;
 
       const messageToSend = message.trim();
 
-      inputRef.current.value = "";
+      inputRef.value = "";
 
       try {
         await startNewConversationInstant(messageToSend, selectedModel);
       } catch (error) {
         console.error("Failed to start conversation:", error);
-        inputRef.current.value = messageToSend;
+        inputRef.value = messageToSend;
       }
     },
     [
@@ -62,7 +76,7 @@ export default function ConversationsPage() {
   );
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         const formEvent = new Event("submit", {
@@ -75,10 +89,11 @@ export default function ConversationsPage() {
     [handleSubmit]
   );
 
-  const handleSuggestionClick = useCallback(
-    (suggestion: string) => {
-      if (!isAtLimit && inputRef.current) {
-        inputRef.current.value = suggestion;
+  const createClickHandler = useCallback(
+    (title: string) => () => {
+      const inputRef = emptyRef.current;
+      if (!isAtLimit && inputRef) {
+        inputRef.value = title;
       }
     },
     [isAtLimit]
@@ -135,9 +150,10 @@ export default function ConversationsPage() {
                 )}
               >
                 <div className="flex items-center gap-2 w-full">
-                  <Input
-                    ref={inputRef}
+                  <Textarea
+                    ref={textAreaRef}
                     defaultValue={""}
+                    onInput={resize}
                     onKeyDown={handleKeyDown}
                     placeholder={
                       isAtLimit
@@ -148,7 +164,40 @@ export default function ConversationsPage() {
                     disabled={effectiveDisabled}
                     autoFocus
                   />
+                </div>
+                <div className="flex items-center gap-8 w-full justify-between">
+                  <div className="flex items-center gap-2">
+                    <ModelSelector
+                      value={selectedModel}
+                      onValueChange={setSelectedModel}
+                      disabled={effectiveDisabled}
+                      variant="compact"
+                    />
 
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="w-9 h-9 shrink-0 rounded-full"
+                      onClick={handleWebSearchToggle}
+                      disabled={effectiveDisabled}
+                      aria-label="Toggle web search"
+                    >
+                      <Globe2 className="w-4 h-4" />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="w-9 h-9 shrink-0 rounded-full"
+                      onClick={handleImageAttach}
+                      disabled={effectiveDisabled}
+                      aria-label="Attach image"
+                    >
+                      <ImagePlus className="w-4 h-4" />
+                    </Button>
+                  </div>
                   <Button
                     type="submit"
                     variant="default"
@@ -164,38 +213,6 @@ export default function ConversationsPage() {
                     )}
                   </Button>
                 </div>
-                <div className="flex items-center gap-2 w-full">
-                  <ModelSelector
-                    value={selectedModel}
-                    onValueChange={setSelectedModel}
-                    disabled={effectiveDisabled}
-                    variant="compact"
-                  />
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="w-9 h-9 shrink-0 rounded-full"
-                    onClick={handleWebSearchToggle}
-                    disabled={effectiveDisabled}
-                    aria-label="Toggle web search"
-                  >
-                    <Globe2 className="w-4 h-4" />
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="w-9 h-9 shrink-0 rounded-full"
-                    onClick={handleImageAttach}
-                    disabled={effectiveDisabled}
-                    aria-label="Attach image"
-                  >
-                    <ImagePlus className="w-4 h-4" />
-                  </Button>
-                </div>
               </div>
             </form>
           </div>
@@ -206,7 +223,7 @@ export default function ConversationsPage() {
                 key={index}
                 title={suggestion.title}
                 icon={suggestion.icon}
-                onClick={() => handleSuggestionClick(suggestion.title)}
+                onClick={createClickHandler(suggestion.title)}
                 disabled={effectiveDisabled}
               />
             ))}

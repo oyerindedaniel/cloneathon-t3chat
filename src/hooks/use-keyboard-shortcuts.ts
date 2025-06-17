@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useChatContext } from "@/contexts/chat-context";
+import { useChatControls } from "@/contexts/chat-context";
 import { useSettingsDialog } from "@/hooks/use-settings-dialog";
 
 export interface KeyboardShortcut {
@@ -16,7 +16,7 @@ export interface KeyboardShortcut {
 
 export function useKeyboardShortcuts() {
   const navigate = useNavigate();
-  const { startNewConversationInstant } = useChatContext();
+  const { startNewConversationInstant } = useChatControls();
   const { openSettings } = useSettingsDialog();
 
   const shortcuts: KeyboardShortcut[] = [

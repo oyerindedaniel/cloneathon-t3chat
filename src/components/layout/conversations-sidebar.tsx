@@ -18,7 +18,7 @@ import { useConversations } from "@/hooks/use-conversations";
 import { useNavigate, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ConversationMenu } from "@/components/conversations/conversation-menu";
-import { useChatContext } from "@/contexts/chat-context";
+import { useChatControls } from "@/contexts/chat-context";
 import { ConversationSearch } from "../conversations/conversation-search";
 import { useGuestStorage } from "@/hooks/use-local-storage";
 import { useAuth } from "@/hooks/use-auth";
@@ -38,9 +38,7 @@ export function ConversationsSidebar() {
 
   const guestStorage = useGuestStorage();
 
-  // console.log("------------------------------", guestStorage);
-
-  const { switchToConversation } = useChatContext();
+  const { switchToConversation } = useChatControls();
 
   const isGuest = !isAuthenticated;
   const displayConversations = isGuest

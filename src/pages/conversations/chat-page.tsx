@@ -3,7 +3,12 @@ import { useEffect, useCallback } from "react";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatInput } from "@/components/chat/chat-input";
 import { MessageSkeleton } from "@/components/chat/message-skeleton";
-import { useChatContext } from "@/contexts/chat-context";
+import {
+  useChatMessages,
+  useChatConfig,
+  useChatControls,
+  useChatSessionStatus,
+} from "@/contexts/chat-context";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { useErrorAlert } from "@/hooks/use-error-alert";
 import { ErrorAlert } from "@/components/error-alert";
@@ -16,39 +21,43 @@ import {
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
   const { openSettings } = useSettingsDialog();
+
   const {
     messages,
     append,
     stop,
     reload,
-    selectedModel,
-    setSelectedModel,
-    isNavigatingToNewChat,
-    setCurrentConversationId,
-    isConversationLoading,
     status,
     error: chatError,
+    experimental_resume,
+  } = useChatMessages();
+  const { selectedModel, setSelectedModel } = useChatConfig();
+  const { isNavigatingToNewChat, setCurrentConversationId } = useChatControls();
+  const {
+    isConversationLoading,
+    conversationError,
+    isConversationError,
     isGuest,
     remainingMessages,
     totalMessages,
     maxMessages,
-    experimental_resume,
-  } = useChatContext();
+  } = useChatSessionStatus();
 
   const { messagesEndRef, lastMessageRef, temporarySpaceHeight } =
     useAutoScroll({
-      topbarHeight: 64,
-      maxQuestionLines: 3,
-      lineHeight: 24,
       smooth: true,
       messages,
-      isStreaming: status === "streaming",
+      status,
     });
 
   const { isConnected, isResuming, startResuming, stopResuming } =
     useConnectionStatus();
 
   const { alertState, hideAlert, handleApiError } = useErrorAlert({
+    conversationError: {
+      isError: isConversationError,
+      error: conversationError,
+    },
     streamStatus: status,
     chatError,
     onResume: reload,
