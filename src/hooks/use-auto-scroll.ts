@@ -183,6 +183,12 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
       const viewportHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
 
+      const rect = messageElement.getBoundingClientRect();
+      const scrollY = window.scrollY;
+
+      const topRelativeToDocument = rect.top + scrollY;
+      console.log({ topRelativeToDocument, messageTop });
+
       let scrollOffset: number;
       if (questionHeight > maxQuestionHeight) {
         console.log("here");

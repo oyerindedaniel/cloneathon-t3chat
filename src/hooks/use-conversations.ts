@@ -1,87 +1,241 @@
 import { api } from "@/trpc/react";
 import { useSession } from "./use-auth";
+import { CONVERSATION_QUERY_LIMIT } from "@/app/constants/conversations";
+import type { inferRouterOutputs } from "@trpc/server";
+import { AppRouter } from "@/server/api/root";
 
-export function useConversations() {
+type ConversationsRouterOutput = inferRouterOutputs<AppRouter>["conversations"];
+
+type GetAllOutput = ConversationsRouterOutput["getAll"];
+type SearchOutput = ConversationsRouterOutput["search"];
+
+export function useConversations(searchQuery: string = "") {
   const session = useSession();
   const utils = api.useUtils();
 
-  const conversations = api.conversations.getAll.useQuery(undefined, {
-    enabled: !!session?.userId,
-  });
+  const getAllQuery = api.conversations.getAll.useInfiniteQuery(
+    { limit: CONVERSATION_QUERY_LIMIT },
+    {
+      enabled: !!session?.userId && !searchQuery,
+      getNextPageParam: (lastPage: GetAllOutput) => lastPage.nextCursor,
+      initialCursor: undefined,
+    }
+  );
+
+  const searchQueryOptions = {
+    limit: CONVERSATION_QUERY_LIMIT,
+    query: searchQuery,
+  };
+
+  const searchConversationsQuery = api.conversations.search.useInfiniteQuery(
+    searchQueryOptions,
+    {
+      enabled: !!session?.userId && !!searchQuery,
+      getNextPageParam: (lastPage: SearchOutput) => lastPage.nextCursor,
+      initialCursor: undefined,
+    }
+  );
+
+  const conversations = searchQuery
+    ? searchConversationsQuery.data?.pages.flatMap(
+        (page: SearchOutput) => page.conversations
+      )
+    : getAllQuery.data?.pages.flatMap(
+        (page: GetAllOutput) => page.conversations
+      );
+
+  const isLoading = searchQuery
+    ? searchConversationsQuery.isLoading
+    : getAllQuery.isLoading;
+  const error = searchQuery
+    ? searchConversationsQuery.error
+    : getAllQuery.error;
+  const fetchNextPage = searchQuery
+    ? searchConversationsQuery.fetchNextPage
+    : getAllQuery.fetchNextPage;
+  const hasNextPage = searchQuery
+    ? searchConversationsQuery.hasNextPage
+    : getAllQuery.hasNextPage;
+  const isFetchingNextPage = searchQuery
+    ? searchConversationsQuery.isFetchingNextPage
+    : getAllQuery.isFetchingNextPage;
 
   const deleteConversation = api.conversations.delete.useMutation({
     onMutate: async ({ id }) => {
       await utils.conversations.getAll.cancel();
+      if (searchQuery) {
+        await utils.conversations.search.cancel({ query: searchQuery });
+      }
 
-      const previousConversations = utils.conversations.getAll.getData();
+      const previousConversationsGetAll =
+        utils.conversations.getAll.getInfiniteData({
+          limit: CONVERSATION_QUERY_LIMIT,
+        });
+      const previousConversationsSearch = searchQuery
+        ? utils.conversations.search.getInfiniteData(searchQueryOptions)
+        : undefined;
 
-      utils.conversations.getAll.setData(undefined, (old) =>
-        old ? old.filter((conv) => conv.id !== id) : []
+      utils.conversations.getAll.setInfiniteData(
+        { limit: CONVERSATION_QUERY_LIMIT },
+        (old) => {
+          if (!old) return undefined;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              conversations: page.conversations.filter(
+                (conv) => conv.id !== id
+              ),
+            })),
+          };
+        }
       );
 
-      return { previousConversations };
+      if (searchQuery) {
+        utils.conversations.search.setInfiniteData(
+          searchQueryOptions,
+          (old) => {
+            if (!old) return undefined;
+            return {
+              ...old,
+              pages: old.pages.map((page) => ({
+                ...page,
+                conversations: page.conversations.filter(
+                  (conv) => conv.id !== id
+                ),
+              })),
+            };
+          }
+        );
+      }
+
+      return {
+        previousConversationsGetAll,
+        previousConversationsSearch,
+      };
     },
     onError: (err, variables, context) => {
-      if (context?.previousConversations) {
-        utils.conversations.getAll.setData(
-          undefined,
-          context.previousConversations
+      if (context?.previousConversationsGetAll) {
+        utils.conversations.getAll.setInfiniteData(
+          { limit: CONVERSATION_QUERY_LIMIT },
+          context.previousConversationsGetAll
+        );
+      }
+      if (searchQuery && context?.previousConversationsSearch) {
+        utils.conversations.search.setInfiniteData(
+          searchQueryOptions,
+          context.previousConversationsSearch
         );
       }
     },
-    onSettled: () => {
-      void utils.conversations.getAll.invalidate();
-    },
+    onSettled: () => {},
   });
 
   const updateConversation = api.conversations.update.useMutation({
     onMutate: async ({ id, title }) => {
       await utils.conversations.getAll.cancel();
+      if (searchQuery) {
+        await utils.conversations.search.cancel({ query: searchQuery });
+      }
 
-      const previousConversations = utils.conversations.getAll.getData();
+      const previousConversationsGetAll =
+        utils.conversations.getAll.getInfiniteData({
+          limit: CONVERSATION_QUERY_LIMIT,
+        });
+      const previousConversationsSearch = searchQuery
+        ? utils.conversations.search.getInfiniteData(searchQueryOptions)
+        : undefined;
 
       if (title) {
-        utils.conversations.getAll.setData(undefined, (old) =>
-          old
-            ? old.map((conv) => (conv.id === id ? { ...conv, title } : conv))
-            : []
+        utils.conversations.getAll.setInfiniteData(
+          { limit: CONVERSATION_QUERY_LIMIT },
+          (old) => {
+            if (!old) return undefined;
+            return {
+              ...old,
+              pages: old.pages.map((page) => ({
+                ...page,
+                conversations: page.conversations.map((conv) =>
+                  conv.id === id ? { ...conv, title } : conv
+                ),
+              })),
+            };
+          }
         );
+
+        if (searchQuery) {
+          utils.conversations.search.setInfiniteData(
+            searchQueryOptions,
+            (old) => {
+              if (!old) return undefined;
+              return {
+                ...old,
+                pages: old.pages.map((page) => ({
+                  ...page,
+                  conversations: page.conversations.map((conv) =>
+                    conv.id === id ? { ...conv, title } : conv
+                  ),
+                })),
+              };
+            }
+          );
+        }
       }
 
-      return { previousConversations };
+      return {
+        previousConversationsGetAll,
+        previousConversationsSearch,
+      };
     },
     onError: (err, variables, context) => {
-      if (context?.previousConversations) {
-        utils.conversations.getAll.setData(
-          undefined,
-          context.previousConversations
+      if (context?.previousConversationsGetAll) {
+        utils.conversations.getAll.setInfiniteData(
+          { limit: CONVERSATION_QUERY_LIMIT },
+          context.previousConversationsGetAll
+        );
+      }
+      if (searchQuery && context?.previousConversationsSearch) {
+        utils.conversations.search.setInfiniteData(
+          searchQueryOptions,
+          context.previousConversationsSearch
         );
       }
     },
-    onSettled: () => {
-      void utils.conversations.getAll.invalidate();
-    },
+    onSettled: () => {},
   });
 
   return {
-    conversations: conversations.data || [],
-    isLoading: conversations.isLoading,
-    error: conversations.error,
+    conversations: conversations || [],
+    isLoading,
+    error,
     deleteConversation: deleteConversation.mutateAsync,
     updateConversation: updateConversation.mutateAsync,
     isDeleting: deleteConversation.isPending,
     isUpdating: updateConversation.isPending,
-    refetch: conversations.refetch,
+    refetch: searchQuery
+      ? searchConversationsQuery.refetch
+      : getAllQuery.refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   };
 }
 
-export function useConversation(id?: string) {
+export function useConversation({
+  id,
+  isNavigatingToNewChat,
+}: {
+  id: string | null;
+  isNavigatingToNewChat: boolean;
+}) {
   const session = useSession();
+
+  const enabled = !!id && !!session?.userId && !isNavigatingToNewChat;
 
   const conversation = api.conversations.getById.useQuery(
     { id: id! },
     {
-      enabled: !!id && !!session?.userId,
+      enabled,
       refetchOnWindowFocus: false,
       refetchOnMount: false,
       refetchOnReconnect: false,

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,7 +19,18 @@ interface ConversationMenuProps {
   onCancelEdit: () => void;
 }
 
-export function ConversationMenu({
+function areEqual(
+  prevProps: ConversationMenuProps,
+  nextProps: ConversationMenuProps
+): boolean {
+  return (
+    prevProps.conversationId === nextProps.conversationId &&
+    prevProps.conversationTitle === nextProps.conversationTitle &&
+    prevProps.isEditing === nextProps.isEditing
+  );
+}
+
+export const ConversationMenu = memo(function ConversationMenu({
   conversationId,
   conversationTitle,
   onDelete,
@@ -130,4 +141,5 @@ export function ConversationMenu({
       />
     </>
   );
-}
+},
+areEqual);

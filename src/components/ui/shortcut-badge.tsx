@@ -3,11 +3,11 @@ import { cn } from "@/lib/utils";
 
 interface ShortcutBadgeProps {
   shortcut: string;
-  className?: string;
+  className?: React.HTMLAttributes<HTMLDivElement>["className"];
   size?: "sm" | "md" | "lg";
 }
 
-export function ShortcutBadge({
+function ShortcutBadgeComponent({
   shortcut,
   className,
   size = "sm",
@@ -43,3 +43,5 @@ export function ShortcutBadge({
     </div>
   );
 }
+
+export const ShortcutBadge = React.memo(ShortcutBadgeComponent);

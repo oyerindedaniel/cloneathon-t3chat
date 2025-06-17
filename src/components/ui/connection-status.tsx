@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { cn } from "@/lib/utils";
 import { Wifi, WifiOff, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,10 @@ interface ConnectionStatusProps {
   isConnected: boolean;
   isResuming?: boolean;
   onRetry?: () => void;
-  className?: string;
+  className?: React.HTMLAttributes<HTMLDivElement>["className"];
 }
 
-export function ConnectionStatus({
+function ConnectionStatusComponent({
   isConnected,
   isResuming = false,
   onRetry,
@@ -25,7 +25,6 @@ export function ConnectionStatus({
     if (!isConnected || isResuming) {
       setShowStatus(true);
     } else {
-      // Hide after a brief delay when connected
       const timer = setTimeout(() => setShowStatus(false), 2000);
       return () => clearTimeout(timer);
     }
@@ -84,45 +83,15 @@ export function ConnectionStatus({
   );
 }
 
-/**
- * Hook to track connection status and resuming state
- * Follows the component architecture pattern of extracting stateful logic
- */
-export function useConnectionStatus() {
-  const [isConnected, setIsConnected] = useState(true);
-  const [isResuming, setIsResuming] = useState(false);
-
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsConnected(true);
-      setIsResuming(false);
-    };
-
-    const handleOffline = () => {
-      setIsConnected(false);
-      setIsResuming(false);
-    };
-
-    // Listen for network status changes
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
-    // Check initial status
-    setIsConnected(navigator.onLine);
-
-    return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-    };
-  }, []);
-
-  const startResuming = () => setIsResuming(true);
-  const stopResuming = () => setIsResuming(false);
-
-  return {
-    isConnected,
-    isResuming,
-    startResuming,
-    stopResuming,
-  };
+function areEqual(
+  prev: ConnectionStatusProps,
+  next: ConnectionStatusProps
+): boolean {
+  return (
+    prev.isConnected === next.isConnected &&
+    prev.isResuming === next.isResuming &&
+    prev.className === next.className
+  );
 }
+
+export const ConnectionStatus = memo(ConnectionStatusComponent, areEqual);

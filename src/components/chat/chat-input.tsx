@@ -179,4 +179,19 @@ export const ChatInput = memo(function ChatInput({
       </form>
     </div>
   );
-});
+},
+areEqual);
+
+function areEqual(prev: ChatInputProps, next: ChatInputProps): boolean {
+  return (
+    prev.disabled === next.disabled &&
+    prev.placeholder === next.placeholder &&
+    prev.selectedModel === next.selectedModel &&
+    prev.isGuest === next.isGuest &&
+    prev.remainingMessages === next.remainingMessages &&
+    prev.totalMessages === next.totalMessages &&
+    prev.maxMessages === next.maxMessages &&
+    prev.isWebSearchEnabled === next.isWebSearchEnabled &&
+    prev.className === next.className
+  );
+}

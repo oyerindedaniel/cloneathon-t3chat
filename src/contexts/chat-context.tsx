@@ -13,10 +13,9 @@ import { flushSync } from "react-dom";
 import { UseChatHelpers } from "@ai-sdk/react";
 import { useGuestStorage } from "@/hooks/use-local-storage";
 import { useAutoResume } from "@/hooks/use-auto-resume";
-import {
-  type Conversation,
-  type Message as DBMessage,
-} from "@/server/db/schema";
+import type { BranchStatus } from "@/server/db/schema";
+import { useLatestValue } from "@/hooks/use-latest-value";
+import { CONVERSATION_QUERY_LIMIT } from "@/app/constants/conversations";
 
 interface ChatContextType extends UseChatHelpers {
   selectedModel: string;
@@ -56,13 +55,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [currentConversationId, setCurrentConversationId] = useState<
     string | null
   >(null);
+  const currentConversationIdRef = useLatestValue(currentConversationId);
 
   const previousTitleRef = useRef<string | null>(null);
   const [selectedModel, setSelectedModelState] = useState(DEFAULT_MODEL.id);
+  const selectedModelRef = useLatestValue(selectedModel);
   const [isNavigatingToNewChat, setIsNavigatingToNewChat] = useState(false);
-  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
-  const isFirstConversation = useRef(false);
+  const isWebSearchEnabledRef = useLatestValue(isWebSearchEnabled);
+
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const isFirstConversationTitleCreated = useRef(false);
 
   const guestStorage = useGuestStorage();
   const isGuest = !isAuthenticated;
@@ -70,17 +73,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const utils = api.useUtils();
   const updateTitle = api.conversations.updateTitle.useMutation();
 
+  const titleId = `title-${currentConversationId ?? uuidv4()}`;
+
   const {
     conversation,
     isLoading: conversationLoading,
     isError: isConversationError,
     error: conversationError,
-  } = useConversation(currentConversationId || undefined);
+  } = useConversation({ id: currentConversationId, isNavigatingToNewChat });
 
   const titleCompletion = useCompletion({
+    id: titleId,
     api: "/api/generate-title",
     onFinish: (result) => {
-      isFirstConversation.current = false;
+      isFirstConversationTitleCreated.current = true;
     },
     onError: (error) => {
       console.error("Title generation failed:", error);
@@ -121,6 +127,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           body: { messages },
         });
 
+        console.log({ result });
+
         return result || null;
       } catch (error) {
         console.error("Title generation failed:", error);
@@ -134,6 +142,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     async (conversationId: string, messages: AIMessage[]) => {
       if (!conversationId || messages.length === 0) return;
 
+      console.log("in update conversiotn tit");
       const newTitle = await generateTitle(messages);
 
       try {
@@ -175,24 +184,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const chat = useAIChat({
     api: "/api/chat",
-    id: currentConversationId || undefined,
     initialMessages,
     sendExtraMessageFields: true,
     generateId: messageIdGenerator,
-    experimental_prepareRequestBody: ({ messages, id }) => {
+    experimental_prepareRequestBody: ({ messages }) => {
       return {
         message: messages[messages.length - 1],
-        id,
-        modelId: selectedModel,
+        id: currentConversationIdRef.current,
+        isWebSearchEnabled: isWebSearchEnabledRef.current,
+        modelId: selectedModelRef.current,
         userLocation: {
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         },
       };
     },
     onResponse: async (response) => {
-      if (conversation && conversation.messages.length > 0) {
-        isFirstConversation.current = false;
-      }
       if (!response.ok) {
         const errorText = await response.text();
         console.log("Chat API error in context:", response.status, errorText);
@@ -200,17 +206,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
     },
     onFinish: async (message) => {
-      if (currentConversationId) {
+      if (currentConversationIdRef.current) {
         if (isGuest) {
-          guestStorage.addMessage(currentConversationId, {
+          guestStorage.addMessage(currentConversationIdRef.current, {
             id: message.id,
             role: "assistant",
             content: message.content,
           });
         }
 
-        if (isFirstConversation.current) {
-          await updateConversationTitle(currentConversationId, [
+        if (!isFirstConversationTitleCreated.current) {
+          await updateConversationTitle(currentConversationIdRef.current, [
             ...chat.messages,
             message,
           ]);
@@ -267,46 +273,49 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             content: message,
           });
         } else if (userId) {
-          const newConversation: Conversation & {
-            lastMessage: DBMessage | null;
-          } = {
+          const newConversation = {
             id: conversationId,
+            userId,
             title: initialTitle,
             model: effectiveModelId,
-            userId: userId,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            lastMessageAt: null,
-            totalMessages: 0,
             parentConversationId: null,
             branchPointMessageId: null,
             branchLevel: 0,
-            branchStatus: "active",
+            branchStatus: "active" as BranchStatus,
             isShared: false,
             shareId: null,
-            lastMessage: null, // Explicitly set to null
+            totalMessages: 0,
+            lastMessageAt: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            lastMessage: null,
           };
 
-          // utils.conversations.getAll.setData(undefined, (old) => {
-          //   const newConversation = {
-          //     id: crypto.randomUUID(),
-          //     userId: "some-user-id",
-          //     title: "New Chat",
-          //     model: "some-model",
-          //     lastMessageAt: null,
-          //     createdAt: new Date(),
-          //     totalMessages: 0,
-          //     branchLevel: 0,
-          //     branchStatus: "active",
-          //     isShared: false,
-          //     lastMessage: null,
-          //   };
-          //   if (old) {
-          //     return [newConversation, ...old] as typeof old;
-          //   } else {
-          //     return [newConversation] as typeof old;
-          //   }
-          // });
+          utils.conversations.getAll.setInfiniteData(
+            { limit: CONVERSATION_QUERY_LIMIT },
+            (old) => {
+              if (!old) {
+                const newConversationPage = {
+                  conversations: [newConversation],
+                  nextCursor: undefined,
+                };
+                return {
+                  pages: [newConversationPage],
+                  pageParams: [null],
+                };
+              }
+
+              const newConversationPage = {
+                conversations: [newConversation],
+                nextCursor: undefined,
+              };
+
+              return {
+                ...old,
+                pages: [newConversationPage, ...old.pages],
+              };
+            }
+          );
         }
 
         chat.setMessages([]);
@@ -320,7 +329,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setIsCreatingConversation(false);
       }
     },
-    [selectedModel, navigate, chat, isGuest, guestStorage, userId]
+    [selectedModel, navigate, chat, isGuest, guestStorage, userId, utils]
   );
 
   const switchToConversation = useCallback(

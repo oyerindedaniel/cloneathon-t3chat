@@ -13,10 +13,8 @@ import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { useErrorAlert } from "@/hooks/use-error-alert";
 import { ErrorAlert } from "@/components/error-alert";
 import { useSettingsDialog } from "@/hooks/use-settings-dialog";
-import {
-  ConnectionStatus,
-  useConnectionStatus,
-} from "@/components/ui/connection-status";
+import { ConnectionStatus } from "@/components/ui/connection-status";
+import { useConnectionStatus } from "@/hooks/use-connection-status";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
@@ -65,10 +63,10 @@ export default function ChatPage() {
   });
 
   useEffect(() => {
-    if (id) {
+    if (id && !isNavigatingToNewChat) {
       setCurrentConversationId(id);
     }
-  }, [id, setCurrentConversationId]);
+  }, [id, setCurrentConversationId, isNavigatingToNewChat]);
 
   const handleMessageSubmit = useCallback(
     (message: string) => {

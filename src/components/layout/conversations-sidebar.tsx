@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Plus, MessageSquare } from "lucide-react";
 import {
   Sidebar,
@@ -24,6 +24,23 @@ import { useGuestStorage } from "@/hooks/use-local-storage";
 import { useAuth } from "@/hooks/use-auth";
 import { ShortcutBadge } from "@/components/ui/shortcut-badge";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import SidebarMenuButtonSkeleton from "./sidebar-menu-button-skeleton";
+import { useInView } from "react-intersection-observer";
+import { type Message } from "@/server/db/schema";
+import {
+  type GuestConversation,
+  type GuestMessage,
+} from "@/hooks/use-local-storage";
+import { useDebounce } from "@/hooks/use-debounce";
+
+interface DisplayConversation {
+  id: string;
+  title: string;
+  model: string;
+  createdAt: Date;
+  updatedAt: Date;
+  lastMessage: Message | GuestMessage | null;
+}
 
 export function ConversationsSidebar() {
   const { id: currentId } = useParams<{ id: string }>();
@@ -33,72 +50,120 @@ export function ConversationsSidebar() {
   const { isAuthenticated } = useAuth();
   const { getShortcutDisplay, shortcuts } = useKeyboardShortcuts();
 
-  const { conversations, isLoading, deleteConversation, updateConversation } =
-    useConversations();
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  const {
+    conversations,
+    isLoading,
+    deleteConversation,
+    updateConversation,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useConversations(debouncedSearchQuery);
 
   const guestStorage = useGuestStorage();
 
   const { switchToConversation } = useChatControls();
 
   const isGuest = !isAuthenticated;
-  const displayConversations = isGuest
-    ? guestStorage.conversations.map((conv) => ({
+  const allConversations: DisplayConversation[] = useMemo(() => {
+    if (isGuest) {
+      return guestStorage.conversations.map((conv: GuestConversation) => ({
         id: conv.id,
         title: conv.title,
         model: conv.model,
         createdAt: new Date(conv.createdAt),
         updatedAt: new Date(conv.updatedAt),
-      }))
-    : conversations;
+        lastMessage:
+          conv.messages.length > 0
+            ? conv.messages[conv.messages.length - 1]
+            : null,
+      }));
+    }
 
-  const newChatShortcut = shortcuts.find((s) => s.description === "New chat");
+    return conversations.map((conv) => ({
+      id: conv.id,
+      title: conv.title,
+      model: conv.model,
+      createdAt: conv.createdAt,
+      updatedAt: conv.updatedAt || conv.createdAt,
+      lastMessage: conv.lastMessage,
+    }));
+  }, [isGuest, guestStorage.conversations, conversations]);
 
-  const handleNewConversation = () => {
-    navigate("/conversations");
-  };
-
-  const handleConversationClick = (conversationId: string) => {
-    if (editingId === conversationId) return;
-
-    const conversation = displayConversations.find(
-      (c) => c.id === conversationId
+  const filteredDisplayConversations: DisplayConversation[] = useMemo(() => {
+    return allConversations.filter((conversation) =>
+      conversation.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
+  }, [allConversations, searchQuery]);
 
-    switchToConversation(conversationId, conversation?.model);
-    navigate(`/conversations/${conversationId}`);
-  };
+  const newChatShortcut = useMemo(() => {
+    return shortcuts.find((s) => s.description === "New chat");
+  }, [shortcuts]);
 
-  const handleDelete = async (id: string) => {
-    if (isGuest) {
-      guestStorage.deleteConversation(id);
-    } else {
-      await deleteConversation({ id });
-    }
+  const handleNewConversation = useCallback(() => {
+    navigate("/conversations");
+  }, [navigate]);
 
-    if (currentId === id) {
-      navigate("/conversations");
-    }
-  };
+  const handleConversationClick = useCallback(
+    (conversationId: string) => {
+      if (editingId === conversationId) return;
 
-  const handleRename = async (id: string, newTitle: string) => {
-    if (isGuest) {
-      guestStorage.updateConversation(id, { title: newTitle });
-    } else {
-      await updateConversation({ id, title: newTitle });
-    }
-  };
+      const conversation = filteredDisplayConversations.find(
+        (c: DisplayConversation) => c.id === conversationId
+      );
 
-  const handleStartEdit = (id: string) => {
-    setEditingId(id);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-  };
-
-  const filteredConversations = displayConversations.filter((conversation) =>
-    conversation.title.toLowerCase().includes(searchQuery.toLowerCase())
+      switchToConversation(conversationId, conversation?.model);
+      navigate(`/conversations/${conversationId}`);
+    },
+    [editingId, filteredDisplayConversations, navigate, switchToConversation]
   );
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      if (isGuest) {
+        guestStorage.deleteConversation(id);
+      } else {
+        await deleteConversation({ id });
+      }
+
+      if (currentId === id) {
+        navigate("/conversations");
+      }
+    },
+    [isGuest, currentId, deleteConversation, navigate]
+  );
+
+  const handleRename = useCallback(
+    async (id: string, newTitle: string) => {
+      if (isGuest) {
+        guestStorage.updateConversation(id, { title: newTitle });
+      } else {
+        await updateConversation({ id, title: newTitle });
+      }
+    },
+    [isGuest, updateConversation]
+  );
+
+  const handleStartEdit = useCallback(
+    (id: string) => {
+      setEditingId(id);
+    },
+    [setEditingId]
+  );
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingId(null);
+  }, [setEditingId]);
+
+  const { ref: inViewRef, inView } = useInView();
+
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <Sidebar className="border-r border-default/50">
@@ -141,17 +206,12 @@ export function ConversationsSidebar() {
           <SidebarGroupLabel className="flex items-center gap-2">
             {isGuest ? "Local Chats" : "Chats"}
           </SidebarGroupLabel>
-          <SidebarGroupContent>
-            {isLoading && !isGuest ? (
-              <div className="space-y-2 p-2">
-                {[...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-8 bg-surface-secondary rounded-lg animate-pulse"
-                  />
-                ))}
-              </div>
-            ) : filteredConversations.length === 0 ? (
+          <SidebarGroupContent className="pb-2 flex-1 overflow-y-auto">
+            {isLoading &&
+            !isGuest &&
+            filteredDisplayConversations.length === 0 ? (
+              <SidebarMenuButtonSkeleton />
+            ) : filteredDisplayConversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-4 text-center">
                 <MessageSquare className="w-8 h-8 text-foreground-muted mb-2" />
                 <p className="text-sm text-foreground-muted">
@@ -162,36 +222,51 @@ export function ConversationsSidebar() {
               </div>
             ) : (
               <SidebarMenu className="flex flex-col gap-1">
-                {filteredConversations.map((conversation) => (
-                  <SidebarMenuItem key={conversation.id}>
-                    <div className="group/item relative">
-                      <SidebarMenuButton
-                        onClick={() => handleConversationClick(conversation.id)}
-                        tooltip={conversation.title}
-                        className={cn(
-                          "relative font-sans text-sm w-full justify-start pr-8",
-                          currentId === conversation.id &&
-                            "bg-surface-secondary",
-                          editingId === conversation.id && "pointer-events-none"
-                        )}
-                      >
-                        {editingId !== conversation.id && (
-                          <div className="truncate">{conversation.title}</div>
-                        )}
-                      </SidebarMenuButton>
+                {filteredDisplayConversations.map(
+                  (conversation: DisplayConversation, index: number) => {
+                    const isLastItem =
+                      index === filteredDisplayConversations.length - 1;
+                    return (
+                      <SidebarMenuItem key={conversation.id}>
+                        <div className="group/item relative">
+                          <SidebarMenuButton
+                            onClick={() =>
+                              handleConversationClick(conversation.id)
+                            }
+                            tooltip={conversation.title}
+                            className={cn(
+                              "relative font-sans text-sm w-full justify-start pr-8",
+                              currentId === conversation.id &&
+                                "bg-surface-secondary",
+                              editingId === conversation.id &&
+                                "pointer-events-none"
+                            )}
+                          >
+                            {editingId !== conversation.id && (
+                              <div className="truncate">
+                                {conversation.title}
+                              </div>
+                            )}
+                          </SidebarMenuButton>
 
-                      <ConversationMenu
-                        conversationId={conversation.id}
-                        conversationTitle={conversation.title}
-                        onDelete={handleDelete}
-                        onRename={handleRename}
-                        isEditing={editingId === conversation.id}
-                        onStartEdit={() => handleStartEdit(conversation.id)}
-                        onCancelEdit={handleCancelEdit}
-                      />
-                    </div>
-                  </SidebarMenuItem>
-                ))}
+                          <ConversationMenu
+                            conversationId={conversation.id}
+                            conversationTitle={conversation.title}
+                            onDelete={handleDelete}
+                            onRename={handleRename}
+                            isEditing={editingId === conversation.id}
+                            onStartEdit={() => handleStartEdit(conversation.id)}
+                            onCancelEdit={handleCancelEdit}
+                          />
+                        </div>
+                        {isLastItem && hasNextPage && (
+                          <div ref={inViewRef} className="h-1" />
+                        )}
+                      </SidebarMenuItem>
+                    );
+                  }
+                )}
+                {isFetchingNextPage && <SidebarMenuButtonSkeleton />}
               </SidebarMenu>
             )}
           </SidebarGroupContent>

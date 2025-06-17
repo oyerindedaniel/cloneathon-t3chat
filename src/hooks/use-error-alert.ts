@@ -150,6 +150,8 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
 
       if (data?.code === "NOT_FOUND") {
         navigate("/conversations");
+      } else if (data?.code === "UNAUTHORIZED") {
+        navigate("/login");
       } else {
         handleConversationLoadError();
       }

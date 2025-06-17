@@ -1,5 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { generateText } from "ai";
+import { generateText, Message } from "ai";
 import { getSession } from "@/server/auth/session";
 import { TITLE_GENERATION_MODEL } from "@/lib/ai/models";
 
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
       userId: session?.user?.id,
     });
 
-    const { messages } = await req.json();
+    const { messages } = (await req.json()) as { messages: Message[] };
     console.log("[GENERATE_TITLE] Request payload:", {
       messagesCount: messages?.length,
       firstMessage: messages?.[0]?.content?.slice(0, 100) + "...",

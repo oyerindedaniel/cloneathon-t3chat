@@ -50,6 +50,11 @@ export const branchStatusEnum = pgEnum("branch_status", [
   "merged",
 ]);
 
+export type MessageRole = (typeof messageRoleEnum.enumValues)[number];
+export type MessageStatus = (typeof messageStatusEnum.enumValues)[number];
+export type AttachmentTypeEnum = (typeof attachmentTypeEnum.enumValues)[number];
+export type BranchStatus = (typeof branchStatusEnum.enumValues)[number];
+
 // ================================
 // USER MANAGEMENT
 // ================================

@@ -6,7 +6,8 @@ import {
   detectConversationContext,
 } from "@/lib/ai/system-message";
 import { conversations, messages, type Message } from "@/server/db/schema";
-import { eq, desc, asc, inArray } from "drizzle-orm";
+import { eq, desc, asc, inArray, ilike } from "drizzle-orm";
+import { CONVERSATION_QUERY_LIMIT } from "@/app/constants/conversations";
 
 const createConversationSchema = z.object({
   id: z.string(),
@@ -66,31 +67,53 @@ const getUserLocationSchema = z.object({
 });
 
 export const conversationsRouter = createTRPCRouter({
-  getAll: protectedProcedure.query(async ({ ctx }) => {
-    const conversationList = await ctx.db
-      .select()
-      .from(conversations)
-      .where(eq(conversations.userId, ctx.session.user.id))
-      .orderBy(desc(conversations.updatedAt));
-
-    const conversationsWithMessages = await Promise.all(
-      conversationList.map(async (conversation) => {
-        const latestMessage = await ctx.db
-          .select()
-          .from(messages)
-          .where(eq(messages.conversationId, conversation.id))
-          .orderBy(desc(messages.createdAt))
-          .limit(1);
-
-        return {
-          ...conversation,
-          lastMessage: latestMessage[0] || null,
-        };
+  getAll: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(CONVERSATION_QUERY_LIMIT),
+        cursor: z.string().nullish(),
       })
-    );
+    )
+    .query(async ({ ctx, input }) => {
+      const { limit, cursor } = input;
 
-    return conversationsWithMessages;
-  }),
+      const conversationsWithMessages =
+        await ctx.db.query.conversations.findMany({
+          where: (conversation, { and, lt }) => {
+            const conditions = [eq(conversation.userId, ctx.session.user.id)];
+            if (cursor) {
+              conditions.push(lt(conversation.updatedAt, new Date(cursor)));
+            }
+            return and(...conditions);
+          },
+          with: {
+            messages: {
+              orderBy: desc(messages.createdAt),
+              limit: 1,
+            },
+          },
+          orderBy: desc(conversations.updatedAt),
+          limit: limit + 1,
+        });
+
+      let nextCursor: typeof cursor | undefined = undefined;
+      if (conversationsWithMessages.length > limit) {
+        const lastConversation = conversationsWithMessages.pop();
+        if (lastConversation?.updatedAt) {
+          nextCursor = lastConversation.updatedAt.toISOString();
+        }
+      }
+
+      return {
+        conversations: conversationsWithMessages.map(
+          ({ messages, ...conv }) => ({
+            ...conv,
+            lastMessage: (messages[0] || null) as Message | null,
+          })
+        ),
+        nextCursor,
+      };
+    }),
 
   getById: protectedProcedure
     .input(z.object({ id: z.string() }))
@@ -430,5 +453,54 @@ export const conversationsRouter = createTRPCRouter({
         .where(inArray(conversations.id, ownedIds));
 
       return { deletedCount: ownedIds.length };
+    }),
+
+  search: protectedProcedure
+    .input(
+      z.object({
+        query: z.string().min(1),
+        limit: z.number().min(1).max(100).default(CONVERSATION_QUERY_LIMIT),
+        cursor: z.string().nullish(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { query, limit, cursor } = input;
+
+      const searchedConversations = await ctx.db.query.conversations.findMany({
+        where: (conversation, { and, lt }) => {
+          const conditions = [
+            eq(conversation.userId, ctx.session.user.id),
+            ilike(conversation.title, `%${query}%`),
+          ];
+          if (cursor) {
+            conditions.push(lt(conversation.updatedAt, new Date(cursor)));
+          }
+          return and(...conditions);
+        },
+        with: {
+          messages: {
+            orderBy: desc(messages.createdAt),
+            limit: 1,
+          },
+        },
+        orderBy: desc(conversations.updatedAt),
+        limit: limit + 1,
+      });
+
+      let nextCursor: typeof cursor | undefined = undefined;
+      if (searchedConversations.length > limit) {
+        const lastConversation = searchedConversations.pop();
+        if (lastConversation?.updatedAt) {
+          nextCursor = lastConversation.updatedAt.toISOString();
+        }
+      }
+
+      return {
+        conversations: searchedConversations.map(({ messages, ...conv }) => ({
+          ...conv,
+          lastMessage: (messages[0] || null) as Message | null,
+        })),
+        nextCursor,
+      };
     }),
 });
