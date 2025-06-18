@@ -22,6 +22,8 @@ export function useSettingsDialog(): UseSettingsDialogReturn {
       const settingsParam = urlParams.get("settings");
       const sectionParam = urlParams.get("section") as SettingsSection;
 
+      // console.log("in here sectionn on chaneg");
+
       requestAnimationFrame(() => {
         if (settingsParam === "open") {
           setIsOpen(true);

@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
  * @returns A tuple: [ref to attach to input, boolean isEmpty, getCurrentValue function, handleSubmit function]
  */
 export function useUncontrolledInputEmpty(): [
-  React.RefObject<HTMLInputElement | null>,
+  React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>,
   boolean,
   () => string,
   (onSubmit: (value: string) => void) => void

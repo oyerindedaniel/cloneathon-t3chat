@@ -1,11 +1,11 @@
 import { memo } from "react";
-import { Message } from "ai";
+import { Message } from "@ai-sdk/react";
 import { MarkdownRenderer } from "@/components/mdx";
 import { ReasoningDisplay } from "./reasoning-display";
 import { ChatControls } from "./chat-controls";
 
 interface ChatMessageProps {
-  message: Message & { reasoning?: string };
+  message: Message;
   currentModel?: string;
   onRetry?: () => void;
   onModelChange?: (modelId: string) => void;
@@ -32,16 +32,34 @@ export const ChatMessage = memo(function ChatMessage({
     );
   }
 
+  // Assistant message
   return (
     <div className="flex w-full justify-start group">
       <div className="max-w-[85%] space-y-3">
-        {message.reasoning && (
-          <ReasoningDisplay reasoning={message.reasoning} isStreaming={false} />
-        )}
+        {message.parts
+          ?.filter((part) => part.type === "reasoning")
+          .map((part, index) => (
+            <ReasoningDisplay
+              key={`reasoning-${index}`}
+              reasoning={part.reasoning}
+              isStreaming={false}
+            />
+          ))}
 
         <div className="relative">
           <div className="text-sm leading-relaxed text-foreground-default">
-            <MarkdownRenderer content={message.content} className="" />
+            {message.content && (
+              <MarkdownRenderer content={message.content} className="" />
+            )}
+
+            {/* 
+            {message.parts
+              ?.filter((part) => part.type === "text")
+              .map((part, index) => (
+                <div key={`text-${index}`} className="mt-2">
+                  <MarkdownRenderer content={part.text} className="" />
+                </div>
+              ))} */}
           </div>
 
           {currentModel && onRetry && onModelChange && (

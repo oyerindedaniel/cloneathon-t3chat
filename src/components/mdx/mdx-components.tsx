@@ -306,7 +306,7 @@ const Pre = ({
               <p>{showLineNumbers ? "Hide" : "Show"} line numbers</p>
             </TooltipContent>
           </Tooltip>
-
+          // TODO: make copy button sticky
           <Tooltip>
             <TooltipTrigger asChild>
               <button

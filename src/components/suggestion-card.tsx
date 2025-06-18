@@ -1,4 +1,5 @@
 import * as React from "react";
+import { memo } from "react";
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,14 @@ interface SuggestionCardProps {
   className?: string;
 }
 
-export function SuggestionCard({
+function areEqual(
+  prev: SuggestionCardProps,
+  next: SuggestionCardProps
+): boolean {
+  return prev.title === next.title && prev.disabled === next.disabled;
+}
+
+export const SuggestionCard = memo(function SuggestionCard({
   title,
   icon: Icon,
   onClick,
@@ -23,7 +31,7 @@ export function SuggestionCard({
       variant="outline"
       className={cn(
         "h-auto p-4 text-left justify-start group transition-all duration-200",
-        "hover:border-primary/20 hover:bg-red-600",
+        "hover:border-primary/20 hover:bg-primary/10",
         "focus-visible:border-primary/30 focus-visible:bg-primary/10",
         className
       )}
@@ -40,4 +48,5 @@ export function SuggestionCard({
       </div>
     </Button>
   );
-}
+},
+areEqual);

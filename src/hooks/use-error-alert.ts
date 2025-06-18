@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getErrorDisplayInfo } from "@/lib/utils/openrouter-errors";
 import type { SettingsSection } from "@/hooks/use-settings-dialog";
+import { UseChatHelpers } from "@ai-sdk/react";
 
 export type ErrorType = "error" | "warning" | "info";
 
@@ -21,7 +22,7 @@ interface UseErrorAlertOptions {
   autoHideDuration?: number;
   // Error sources to monitor
   conversationError?: ConversationError;
-  streamStatus?: string;
+  streamStatus?: UseChatHelpers["status"];
   chatError?: Error | string | null;
   // Resume function for stream errors
   onResume?: () => void;
@@ -148,8 +149,9 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
       const data = error.data as Record<string, unknown> | undefined;
 
       if (data?.code === "NOT_FOUND") {
-        console.log("NOT_FOUND");
         navigate("/conversations");
+      } else if (data?.code === "UNAUTHORIZED") {
+        navigate("/login");
       } else {
         handleConversationLoadError();
       }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { X, AlertTriangle, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ interface MessageLimitWarningProps {
   className?: React.HTMLAttributes<HTMLDivElement>["className"];
 }
 
-export function MessageLimitWarning({
+export const MessageLimitWarning = memo(function MessageLimitWarning({
   remainingMessages,
   totalMessages,
   maxMessages,
@@ -34,12 +34,12 @@ export function MessageLimitWarning({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 px-4 py-3 rounded-lg border",
+        "flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-md",
         isAtLimit
           ? "bg-destructive/10 border-destructive/20 text-destructive"
           : isNearLimit
           ? "bg-warning/10 border-warning/20 text-warning-foreground"
-          : "bg-muted border-border text-muted-foreground",
+          : "bg-primary/40 border-primary/50 text-muted-foreground",
         className
       )}
     >
@@ -92,4 +92,4 @@ export function MessageLimitWarning({
       </Button>
     </div>
   );
-}
+});

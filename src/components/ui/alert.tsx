@@ -4,18 +4,18 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const alertVariants = cva(
-  "relative w-full rounded-lg border px-4 py-3 text-sm grid has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] grid-cols-[0_1fr] has-[>svg]:gap-x-3 gap-y-0.5 items-start [&>svg]:size-4 [&>svg]:translate-y-0.5",
+  "relative w-full rounded-lg border backdrop-blur-md px-4 py-3 text-sm grid has-[>svg]:grid-cols-[calc(var(--spacing)*4)_1fr] grid-cols-[0_1fr] has-[>svg]:gap-x-3 gap-y-0.5 items-start [&>svg]:size-4 [&>svg]:translate-y-0.5",
   {
     variants: {
       variant: {
         default: "bg-surface-secondary text-foreground-default border-subtle",
         success:
-          "bg-surface-secondary border-success/50 text-foreground-default [&>svg]:text-success shadow-sm ring-1 ring-success/10",
+          "bg-success/50 border-success/80 text-white [&>svg]:text-success shadow-sm ring-1 ring-success/10",
         warning:
-          "bg-surface-secondary border-warning/50 text-foreground-default [&>svg]:text-warning shadow-sm ring-1 ring-warning/10",
+          "bg-warning/50 border-warning/80 text-white [&>svg]:text-warning shadow-sm ring-1 ring-warning/10",
         error:
-          "bg-surface-secondary border-error/50 text-foreground-default [&>svg]:text-error shadow-sm ring-1 ring-error/10",
-        info: "bg-surface-secondary border-info/50 text-foreground-default [&>svg]:text-info shadow-sm ring-1 ring-info/10",
+          "bg-error/50 border-error/80 text-white [&>svg]:text-error shadow-sm ring-1 ring-error/10",
+        info: "bg-info/50 border-info/80 text-white [&>svg]:text-info shadow-sm ring-1 ring-info/10",
       },
     },
     defaultVariants: {

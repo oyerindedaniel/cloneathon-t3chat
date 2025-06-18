@@ -1,6 +1,12 @@
 import { useEffect, useRef, useCallback, useState } from "react";
+import { UseChatHelpers } from "@ai-sdk/react";
 
 interface UseAutoScrollOptions {
+  /**
+   * Height of the search bar to account for when scrolling
+   * Defaults to CSS variable --search-height or 64px
+   */
+  searchBarHeight?: number;
   /**
    * Height of the topbar to account for when scrolling
    * Defaults to CSS variable --topbar-height or 64px
@@ -26,19 +32,20 @@ interface UseAutoScrollOptions {
    */
   messages?: Array<{ role: string; [key: string]: any }>;
   /**
-   * Whether AI is currently streaming a response
+   * AI status
    */
-  isStreaming?: boolean;
+  status: UseChatHelpers["status"];
 }
 
-export function useAutoScroll(options: UseAutoScrollOptions = {}) {
+export function useAutoScroll(options: UseAutoScrollOptions) {
   const {
+    searchBarHeight = 96,
     topbarHeight = 64,
     maxQuestionLines = 3,
     lineHeight = 24,
     smooth = true,
     messages = [],
-    isStreaming = false,
+    status = "ready",
   } = options;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -47,12 +54,111 @@ export function useAutoScroll(options: UseAutoScrollOptions = {}) {
   const prevMessagesLength = useRef(messages.length);
   const spaceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Scroll to the end of messages (for regular scrolling)
+  const isStreaming = status === "streaming";
+  const isReady = status === "ready";
+
+  const behavior = smooth ? "smooth" : "instant";
+
+  const calculateOffset = useCallback(() => {
+    const topbar =
+      parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue(
+          "--topbar-height"
+        )
+      ) * 16 || topbarHeight;
+    const searchbar =
+      parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue(
+          "--search-height"
+        )
+      ) * 16 || searchBarHeight;
+    const padding = 16;
+    return { topbar, searchbar, padding };
+  }, []);
+
+  /**
+   * Scrolls an element to the top of the viewport with optional offset.
+   * Used to align message with topbar visibility.
+   */
+  const scrollToTopWithOffset = useCallback((el: HTMLElement, offset = 0) => {
+    const top = el.offsetTop - offset;
+    window.scrollTo({ top, behavior: "smooth" });
+  }, []);
+
+  /**
+   * Scrolls an element to the bottom of the viewport, accounting for fixed search bar and padding.
+   * Used to make the end of assistant's message fully visible.
+   */
+  const scrollToBottomWithOffset = useCallback(
+    (el: HTMLElement, offset = 0) => {
+      const bottom =
+        el.offsetTop + el.offsetHeight - window.innerHeight + offset;
+      window.scrollTo({ top: bottom, behavior: "smooth" });
+    },
+    []
+  );
+
+  /**
+   * Scrolls the assistant message to the top of the viewport with topbar offset.
+   * Typically used when resuming a stream on reload.
+   */
+  const scrollToAssistantMessageTop = useCallback(() => {
+    const el = lastMessageRef.current;
+    if (!el) return;
+    const { topbar, padding } = calculateOffset();
+    scrollToTopWithOffset(el, topbar + padding);
+  }, [lastMessageRef, calculateOffset, scrollToTopWithOffset]);
+
+  /**
+   * Scrolls the assistant message to the bottom of the viewport considering search bar height.
+   * Ensures bottom of long assistant responses are shown fully.
+   */
+  const scrollToAssistantMessageBottom = useCallback(() => {
+    const el = lastMessageRef.current;
+    if (!el) return;
+    const { searchbar, padding } = calculateOffset();
+    scrollToBottomWithOffset(el, searchbar + padding);
+  }, [lastMessageRef, calculateOffset, scrollToBottomWithOffset]);
+
+  const scrollToEndIfRoomAvailable = useCallback(() => {
+    const lastEl = lastMessageRef.current;
+    if (!lastEl) return;
+
+    const { topbar, searchbar, padding } = calculateOffset();
+    const availableHeight =
+      window.innerHeight - topbar - searchbar - padding * 2;
+    const heightFromLast = lastEl.offsetTop + lastEl.offsetHeight;
+
+    if (heightFromLast <= window.scrollY + availableHeight) {
+      messagesEndRef.current?.scrollIntoView({ behavior });
+    }
+  }, [lastMessageRef, messagesEndRef, behavior, calculateOffset]);
+
+  /**
+   * Scrolls the last message to the bottom of the viewport
+   * if it's not already fully visible, accounting for fixed UI like
+   * search bar and padding.
+   */
   const scrollToEnd = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: smooth ? "smooth" : "instant",
-    });
-  }, [smooth]);
+    const el = lastMessageRef.current;
+    if (!el) return;
+
+    const { searchbar, padding } = calculateOffset();
+    const offset = searchbar + padding;
+
+    const messageBottom = el.offsetTop + el.offsetHeight;
+    const viewportBottom = window.scrollY + window.innerHeight - offset;
+
+    // Only scroll if the bottom of the message is below the visible area
+    if (messageBottom > viewportBottom) {
+      const scrollY = messageBottom - window.innerHeight + offset;
+
+      window.scrollTo({
+        top: scrollY,
+        behavior,
+      });
+    }
+  }, [lastMessageRef, calculateOffset, behavior]);
 
   // Create temporary space to allow scrolling
   const createTemporarySpace = useCallback((requiredSpace: number) => {
@@ -60,130 +166,94 @@ export function useAutoScroll(options: UseAutoScrollOptions = {}) {
     // Don't auto-remove the space - it will be recalculated on next message
   }, []);
 
-  // Recalculate temporary space when messages change instead of removing it
-  useEffect(() => {
-    if (messages.length > 0 && temporarySpaceHeight > 0) {
-      // Recalculate space based on current layout
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage?.role === "assistant") {
-        // Keep the space for assistant messages to prevent jumping
-        return;
-      }
-    }
-  }, [messages, temporarySpaceHeight]);
-
-  // Scroll new message to top with topbar offset
   const scrollMessageToTop = useCallback(
     (messageElement?: HTMLElement) => {
-      if (!messageElement) {
-        messageElement = lastMessageRef.current || undefined;
-      }
-
+      messageElement = messageElement || lastMessageRef.current || undefined;
       if (!messageElement) return;
 
-      const actualTopbarHeight =
-        parseInt(
-          getComputedStyle(document.documentElement).getPropertyValue(
-            "--topbar-height"
-          )
-        ) || topbarHeight;
+      console.log(messageElement);
 
-      const questionElement = messageElement.querySelector(
-        '[data-role="user"]'
-      ) as HTMLElement;
+      const actualTopbarHeight = calculateOffset().topbar;
 
-      if (questionElement) {
-        const questionHeight = questionElement.offsetHeight;
-        const maxQuestionHeight = maxQuestionLines * lineHeight;
+      const questionElement = messageElement;
+      const questionHeight = questionElement.offsetHeight;
+      const maxQuestionHeight = maxQuestionLines * lineHeight;
 
-        // Calculate how much space we need to scroll properly
-        const viewportHeight = window.innerHeight;
-        const messageTop = messageElement.offsetTop;
-        const documentHeight = document.documentElement.scrollHeight;
+      const messageTop = messageElement.offsetTop;
+      const viewportHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
 
-        // Calculate required space for scrolling
-        let requiredSpace = 0;
+      const rect = messageElement.getBoundingClientRect();
+      const scrollY = window.scrollY;
 
-        if (questionHeight > maxQuestionHeight) {
-          // For long questions, we need space to scroll most of it out of view
-          const scrollOffset =
-            questionHeight - lineHeight + actualTopbarHeight + 16;
-          const targetScrollTop = messageTop - scrollOffset;
+      const topRelativeToDocument = rect.top + scrollY;
+      console.log({ topRelativeToDocument, messageTop });
 
-          if (targetScrollTop > documentHeight - viewportHeight) {
-            requiredSpace =
-              targetScrollTop - (documentHeight - viewportHeight) + 100; // Extra buffer
-          }
-        } else {
-          // For normal questions, we need space to scroll to top with topbar offset
-          const targetScrollTop = messageTop - actualTopbarHeight - 16;
+      let scrollOffset: number;
+      if (questionHeight > maxQuestionHeight) {
+        console.log("here");
+        // For long questions: leave max lines visible
+        scrollOffset =
+          questionHeight - maxQuestionHeight + actualTopbarHeight + 16;
 
-          if (targetScrollTop > documentHeight - viewportHeight) {
-            requiredSpace =
-              targetScrollTop - (documentHeight - viewportHeight) + 100; // Extra buffer
-          }
-        }
-
-        // Create temporary space if needed
-        if (requiredSpace > 0) {
-          createTemporarySpace(requiredSpace);
-        }
-
-        // Perform the scroll after a brief delay to allow space creation
-        setTimeout(() => {
-          if (questionHeight > maxQuestionHeight) {
-            const scrollOffset =
-              questionHeight - lineHeight + actualTopbarHeight + 16;
-
-            window.scrollTo({
-              top: messageElement.offsetTop - scrollOffset,
-              behavior: smooth ? "smooth" : "instant",
-            });
-          } else {
-            window.scrollTo({
-              top: messageElement.offsetTop - actualTopbarHeight - 16,
-              behavior: smooth ? "smooth" : "instant",
-            });
-          }
-        }, 50); // Small delay to ensure space is created
+        console.log({
+          scrollOffset,
+          questionHeight,
+          maxQuestionHeight,
+          actualTopbarHeight,
+          targetScrollTop: messageTop - scrollOffset,
+          min: document.documentElement.scrollHeight - window.innerHeight,
+        });
       } else {
-        // Fallback: scroll to message top with topbar offset
-        const messageTop = messageElement.offsetTop;
-        const targetScrollTop = messageTop - actualTopbarHeight - 16;
-        const documentHeight = document.documentElement.scrollHeight;
-        const viewportHeight = window.innerHeight;
-
-        if (targetScrollTop > documentHeight - viewportHeight) {
-          const requiredSpace =
-            targetScrollTop - (documentHeight - viewportHeight) + 100;
-          createTemporarySpace(requiredSpace);
-        }
-
-        setTimeout(() => {
-          window.scrollTo({
-            top: targetScrollTop,
-            behavior: smooth ? "smooth" : "instant",
-          });
-        }, 50);
+        // For short questions: scroll near top
+        scrollOffset = actualTopbarHeight + 16;
       }
+
+      const targetScrollTop = messageTop - scrollOffset;
+      const maxScrollable = documentHeight - viewportHeight;
+
+      let requiredSpace = 0;
+      if (targetScrollTop > maxScrollable) {
+        requiredSpace = targetScrollTop - maxScrollable + 100;
+        createTemporarySpace(requiredSpace);
+      }
+
+      setTimeout(() => {
+        const clampedScrollTop = Math.min(
+          targetScrollTop,
+          document.documentElement.scrollHeight - window.innerHeight
+        );
+        window.scrollTo({
+          top: clampedScrollTop,
+          behavior,
+        });
+      }, 50);
     },
-    [topbarHeight, maxQuestionLines, lineHeight, smooth, createTemporarySpace]
+    [
+      topbarHeight,
+      maxQuestionLines,
+      lineHeight,
+      behavior,
+      createTemporarySpace,
+      calculateOffset,
+    ]
   );
 
   // Auto-scroll effect for new messages
   const handleNewMessage = useCallback(
     (isNewUserMessage = false) => {
       if (isNewUserMessage) {
+        console.log("valid scrollMessageToTop");
         setTimeout(() => {
           scrollMessageToTop();
         }, 100); // Small delay to ensure DOM is updated
       } else {
-        setTimeout(() => {
-          scrollToEnd();
-        }, 100);
+        scrollToAssistantMessageBottom();
+        console.log("valid scrollToEnd");
+        setTimeout(() => {}, 100);
       }
     },
-    [scrollMessageToTop, scrollToEnd]
+    [scrollMessageToTop]
   );
 
   // Handle auto-scroll for new messages when messages array changes
@@ -191,12 +261,29 @@ export function useAutoScroll(options: UseAutoScrollOptions = {}) {
     if (messages.length > prevMessagesLength.current) {
       const lastMessage = messages[messages.length - 1];
       const isNewUserMessage = lastMessage?.role === "user";
+      const isNewAssistantMessage = lastMessage?.role === "assistant";
+
+      console.log({ isNewAssistantMessage, isNewUserMessage });
+
+      if (isNewAssistantMessage && isStreaming) return;
+
+      if (isNewAssistantMessage && status === "ready") {
+        console.log("reach auto scro chan ");
+        return handleNewMessage();
+      }
+
+      console.log(isStreaming);
 
       handleNewMessage(isNewUserMessage);
-
       prevMessagesLength.current = messages.length;
     }
-  }, [messages, handleNewMessage]);
+  }, [messages, handleNewMessage, isStreaming, isReady]);
+
+  useEffect(() => {
+    if (isStreaming) {
+      scrollToAssistantMessageTop();
+    }
+  }, [isStreaming]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -210,8 +297,10 @@ export function useAutoScroll(options: UseAutoScrollOptions = {}) {
   return {
     messagesEndRef,
     lastMessageRef,
-    scrollToEnd,
     scrollMessageToTop,
+    scrollToEnd,
+    scrollToEndIfRoomAvailable,
+    scrollToAssistantMessageBottom,
     handleNewMessage,
     temporarySpaceHeight,
   };

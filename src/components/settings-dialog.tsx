@@ -26,6 +26,7 @@ import {
   AlertCircle,
   Loader2,
   CheckCircle,
+  Keyboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -35,8 +36,10 @@ import { AVAILABLE_MODELS } from "@/lib/ai/models";
 import { api } from "@/trpc/react";
 import { useRouter } from "next/navigation";
 import { ApiKeyStats } from "@/components/api-key-stats";
+import { ShortcutBadge } from "@/components/ui/shortcut-badge";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 
-type Section = "settings" | "api-keys";
+type Section = "settings" | "api-keys" | "shortcuts";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -56,6 +59,7 @@ export function SettingsDialog({
   const { user, signOut } = useAuth();
   const { copied, copy } = useClipboard();
   const { toast, showToast } = useToast();
+  const { shortcuts, getShortcutDisplay } = useKeyboardShortcuts();
 
   const utils = api.useUtils();
   const router = useRouter();
@@ -176,6 +180,11 @@ export function SettingsDialog({
       id: "api-keys" as const,
       label: "API Keys",
       icon: Key,
+    },
+    {
+      id: "shortcuts" as const,
+      label: "Keyboard Shortcuts",
+      icon: Keyboard,
     },
   ];
 
@@ -473,6 +482,61 @@ export function SettingsDialog({
                             <li>Copy and paste it above</li>
                           </ol>
                         </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {activeSection === "shortcuts" && (
+                  <motion.div
+                    key="shortcuts"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                    className="p-8 space-y-6"
+                  >
+                    <div>
+                      <h2 className="text-lg font-semibold mb-2">
+                        Keyboard Shortcuts
+                      </h2>
+                      <p className="text-sm text-foreground-muted mb-6">
+                        Use these keyboard shortcuts to navigate and interact
+                        with the application more efficiently.
+                      </p>
+
+                      <div className="space-y-6">
+                        {["chat", "settings", "navigation"].map((category) => {
+                          const categoryShortcuts = shortcuts.filter(
+                            (shortcut) => shortcut.category === category
+                          );
+
+                          if (categoryShortcuts.length === 0) return null;
+
+                          return (
+                            <div key={category} className="space-y-3">
+                              <h3 className="text-sm font-medium text-foreground-default capitalize">
+                                {category}
+                              </h3>
+                              <div className="space-y-2">
+                                {categoryShortcuts.map((shortcut, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-center justify-between p-3 bg-surface-secondary rounded-lg"
+                                  >
+                                    <span className="text-sm text-foreground-default">
+                                      {shortcut.description}
+                                    </span>
+                                    <ShortcutBadge
+                                      shortcut={getShortcutDisplay(shortcut)}
+                                      size="sm"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </motion.div>

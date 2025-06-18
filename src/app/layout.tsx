@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { auth } from "@/server/auth/config";
+import { BetterAuthSessionProvider } from "@/components/better-auth-session-provider";
+import { CONVERSATION_QUERY_LIMIT } from "@/app/constants/conversations";
+import { headers } from "next/headers";
+import { TRPCReactProvider } from "@/trpc/react";
+import { api, HydrateClient, caller } from "@/trpc/server";
+import { dehydrate, QueryClient } from "@tanstack/react-query";
+import { getQueryKey } from "@trpc/react-query";
 
 import "./globals.css";
 import "./syntax-highlighter.css";
@@ -21,17 +29,62 @@ export const metadata: Metadata = {
   icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const allHeaders = await headers();
+  const requestHeaders = new Headers();
+  for (const [key, value] of allHeaders.entries()) {
+    requestHeaders.append(key, value);
+  }
+  const session = await auth.api.getSession({ headers: requestHeaders });
+
+  console.log("better auth session---------", session);
+
+  const queryClient = new QueryClient();
+
+  // queryKey: getQueryKey(
+  //   api.conversations.getAll,
+  //   { limit: CONVERSATION_QUERY_LIMIT },
+  //   "infinite"
+  // ),
+
+  const queryKey = [
+    "conversations.getAll",
+    { limit: CONVERSATION_QUERY_LIMIT },
+  ];
+  await queryClient.prefetchInfiniteQuery({
+    queryKey,
+    queryFn: async ({ pageParam }) =>
+      api.conversations.getAll({
+        limit: CONVERSATION_QUERY_LIMIT,
+        cursor: pageParam,
+      }),
+    initialPageParam: undefined,
+  });
+
+  const dehydratedState = dehydrate(queryClient);
+
   return (
     <html lang="en">
+      <head>
+        {process.env.NODE_ENV !== "production" && (
+          <script
+            src="https://unpkg.com/react-scan/dist/auto.global.js"
+            async
+          />
+        )}
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <BetterAuthSessionProvider initialSession={session}>
+          <TRPCReactProvider dehydratedState={dehydratedState}>
+            {children}
+          </TRPCReactProvider>
+        </BetterAuthSessionProvider>
       </body>
     </html>
   );
