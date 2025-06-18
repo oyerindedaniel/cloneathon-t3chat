@@ -1,5 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { generateText, Message } from "ai";
+import { streamText, Message } from "ai";
 import { getSession } from "@/server/auth/session";
 import { TITLE_GENERATION_MODEL } from "@/lib/ai/models";
 
@@ -40,7 +40,8 @@ export async function POST(req: Request) {
     console.log("[GENERATE_TITLE] Using model:", TITLE_GENERATION_MODEL.id);
     console.log("[GENERATE_TITLE] Context length:", conversationText.length);
 
-    const result = await generateText({
+    // Use streamText instead of generateText for streaming response
+    const result = await streamText({
       model: openrouter.chat(TITLE_GENERATION_MODEL.id),
       messages: [
         {
@@ -56,11 +57,10 @@ export async function POST(req: Request) {
       maxTokens: 20,
     });
 
-    const generatedTitle = result.text.trim();
-    console.log("[GENERATE_TITLE] Generated title:", generatedTitle);
     console.log("[GENERATE_TITLE] Title generation successful");
 
-    return Response.json({ title: generatedTitle });
+    // Return the streaming response
+    return result.toTextStreamResponse();
   } catch (error) {
     console.error("[GENERATE_TITLE] Title generation error:", {
       error: error instanceof Error ? error.message : error,

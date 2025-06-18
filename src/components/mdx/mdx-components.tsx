@@ -145,7 +145,7 @@ const A = ({
 }: React.HTMLAttributes<HTMLAnchorElement>) => (
   <a
     className={cn(
-      "text-accent-primary hover:text-accent-primary/80 underline underline-offset-2 transition-colors",
+      "text-primary hover:text-primary/80 underline underline-offset-2 transition-colors",
       className
     )}
     {...props}
@@ -306,7 +306,7 @@ const Pre = ({
               <p>{showLineNumbers ? "Hide" : "Show"} line numbers</p>
             </TooltipContent>
           </Tooltip>
-          // TODO: make copy button sticky
+
           <Tooltip>
             <TooltipTrigger asChild>
               <button

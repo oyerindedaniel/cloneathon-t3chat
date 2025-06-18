@@ -1,3 +1,5 @@
+import { APICallError, InvalidPromptError } from "ai";
+
 export interface OpenRouterError {
   error: {
     code: number;
@@ -34,60 +36,85 @@ export function parseOpenRouterError(error: unknown): {
   code?: number;
   message: string;
   metadata?: Record<string, unknown>;
+  title?: string;
 } {
   console.log("Parsing error:--------------------------------------", error);
 
-  // Handle OpenRouter API errors
-  if (typeof error === "object" && error !== null) {
-    const errorObj = error as any;
-
-    // Check for AI SDK wrapped errors with responseBody
-    if (errorObj.responseBody && typeof errorObj.responseBody === "string") {
+  // 1. Handle AI SDK APICallError
+  if (APICallError.isInstance(error)) {
+    if (error.responseBody && typeof error.responseBody === "string") {
       try {
-        const parsedBody = JSON.parse(errorObj.responseBody);
-        if (parsedBody.error && typeof parsedBody.error === "object") {
+        const parsedBody = JSON.parse(error.responseBody);
+        if (
+          parsedBody &&
+          typeof parsedBody === "object" &&
+          "error" in parsedBody &&
+          typeof parsedBody.error === "object"
+        ) {
+          const openRouterError = parsedBody.error as {
+            code?: number;
+            message?: string;
+            metadata?: Record<string, unknown>;
+          };
           return {
             type: "openrouter",
-            code: parsedBody.error.code || errorObj.statusCode,
-            message: parsedBody.error.message || "Unknown OpenRouter error",
-            metadata: parsedBody.error.metadata,
+            code: openRouterError.code || error.statusCode,
+            message: openRouterError.message || "Unknown OpenRouter error",
+            metadata: openRouterError.metadata,
           };
         }
       } catch (e) {
-        // Fall through to other checks
+        // Fall through to other checks if responseBody isn't valid JSON or doesn't conform to expected error structure
       }
     }
 
-    // Check for direct OpenRouter error format
-    if (errorObj.error && typeof errorObj.error === "object") {
-      const openRouterError = errorObj.error;
-      return {
-        type: "openrouter",
-        code: openRouterError.code,
-        message: openRouterError.message || "Unknown OpenRouter error",
-        metadata: openRouterError.metadata,
-      };
-    }
-
-    // Check for HTTP response errors
-    if (errorObj.statusCode && errorObj.message) {
-      return {
-        type: "network",
-        code: errorObj.statusCode,
-        message: errorObj.message,
-      };
-    }
-
-    // Check for Error objects
-    if (errorObj.message) {
-      return {
-        type: "unknown",
-        message: errorObj.message,
-      };
-    }
+    return {
+      type: "network",
+      code: error.statusCode,
+      message:
+        error.message || `API call failed with status ${error.statusCode}`,
+    };
   }
 
-  // Handle string errors
+  // 2. Handle AI SDK InvalidPromptError
+  if (InvalidPromptError.isInstance(error)) {
+    return {
+      type: "unknown",
+      title: "Invalid Prompt",
+      message: error.message || "Invalid prompt provided.",
+      metadata: {
+        prompt: error.prompt,
+        cause:
+          error.cause instanceof Error
+            ? error.cause.message
+            : String(error.cause),
+      },
+    };
+  }
+
+  // 4. Handle generic HTTP response errors (e.g., from fetch without AI SDK wrapper)
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "statusCode" in error &&
+    typeof error.statusCode === "number" &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return {
+      type: "network",
+      code: error.statusCode,
+      message: error.message,
+    };
+  }
+
+  if (error instanceof Error) {
+    return {
+      type: "unknown",
+      message: error.message,
+    };
+  }
+
   if (typeof error === "string") {
     return {
       type: "unknown",

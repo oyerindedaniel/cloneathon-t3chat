@@ -29,3 +29,5 @@ This document outlines the key changes and improvements made to the application,
   - Corrected typing for `lastPage` and `page` parameters in `useInfiniteQuery` callbacks and for `conv` in `map` and `find` functions, improving type inference and eliminating implicit `any` types.
 - **Incorrect Query Arguments**: Fixed issues where `searchQueryOptions` were incorrectly passed as string arguments to tRPC `getInfiniteData` and `setInfiniteData` methods.
 - **Optimistic Update Logic**: Ensured that the `pages` array structure is correctly preserved during optimistic updates in `updateConversation`'s `setInfiniteData` calls.
+- **Robust Error Parsing**: Refactored `parseOpenRouterError` in `src/lib/utils/openrouter-errors.ts` to correctly handle `APICallError` instances from the AI SDK, ensuring type safety by avoiding `any` casts and using `APICallError.isInstance` for more reliable error detection and parsing.
+- **Unified Message Type**: Updated the `Message` type in `src/server/db/schema.ts` to extend the `Message` type from the `@ai` SDK, ensuring consistent message type definitions across the application and preventing potential type mismatches.

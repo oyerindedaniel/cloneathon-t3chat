@@ -115,25 +115,22 @@ export const ChatInput = memo(function ChatInput({
                 variant="compact"
               />
 
-              {onWebSearchToggle && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    "w-9 h-9 shrink-0 rounded-full",
-                    isWebSearchEnabled &&
-                      "bg-accent-primary text-foreground-on-accent"
-                  )}
-                  onClick={onWebSearchToggle}
-                  disabled={effectiveDisabled}
-                  aria-label="Toggle web search"
-                >
-                  <Globe2 className="w-4 h-4" />
-                </Button>
-              )}
-
               <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "w-9 h-9 shrink-0 rounded-full",
+                  isWebSearchEnabled && "bg-primary text-foreground-on-accent"
+                )}
+                onClick={onWebSearchToggle}
+                disabled={effectiveDisabled}
+                aria-label="Toggle web search"
+              >
+                <Globe2 className="w-4 h-4" />
+              </Button>
+
+              {/* <Button
                 type="button"
                 variant="ghost"
                 size="icon"
@@ -143,7 +140,7 @@ export const ChatInput = memo(function ChatInput({
                 aria-label="Attach image"
               >
                 <ImagePlus className="w-4 h-4" />
-              </Button>
+              </Button> */}
             </div>
             <>
               {disabled && onStop ? (

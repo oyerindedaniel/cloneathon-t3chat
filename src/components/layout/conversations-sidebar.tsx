@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 import { ConversationMenu } from "@/components/conversations/conversation-menu";
 import { useChatControls } from "@/contexts/chat-context";
 import { ConversationSearch } from "../conversations/conversation-search";
-import { useGuestStorage } from "@/hooks/use-local-storage";
 import { useAuth } from "@/hooks/use-auth";
 import { ShortcutBadge } from "@/components/ui/shortcut-badge";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
@@ -28,9 +27,10 @@ import SidebarMenuButtonSkeleton from "./sidebar-menu-button-skeleton";
 import { useInView } from "react-intersection-observer";
 import { type Message } from "@/server/db/schema";
 import {
+  useGuestStorage,
   type GuestConversation,
-  type GuestMessage,
-} from "@/hooks/use-local-storage";
+} from "@/contexts/guest-storage-context";
+import { Message as AIMessage } from "ai";
 import { useDebounce } from "@/hooks/use-debounce";
 
 interface DisplayConversation {
@@ -39,7 +39,7 @@ interface DisplayConversation {
   model: string;
   createdAt: Date;
   updatedAt: Date;
-  lastMessage: Message | GuestMessage | null;
+  lastMessage: Message | AIMessage | null;
 }
 
 export function ConversationsSidebar() {
@@ -91,6 +91,8 @@ export function ConversationsSidebar() {
       lastMessage: conv.lastMessage,
     }));
   }, [isGuest, guestStorage.conversations, conversations]);
+
+  console.log({ isGuest, conversations });
 
   const filteredDisplayConversations: DisplayConversation[] = useMemo(() => {
     return allConversations.filter((conversation) =>

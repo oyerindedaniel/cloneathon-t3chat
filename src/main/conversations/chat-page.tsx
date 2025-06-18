@@ -1,3 +1,5 @@
+"use client";
+
 import { useParams } from "react-router-dom";
 import { useEffect, useCallback } from "react";
 import { ChatMessage } from "@/components/chat/chat-message";
@@ -28,6 +30,7 @@ export default function ChatPage() {
     status,
     error: chatError,
     experimental_resume,
+    addToolResult,
   } = useChatMessages();
   const { selectedModel, setSelectedModel } = useChatConfig();
   const { isNavigatingToNewChat, setCurrentConversationId } = useChatControls();
@@ -160,10 +163,12 @@ export default function ChatPage() {
                 data-role={message.role}
               >
                 <ChatMessage
+                  status={status}
                   message={message}
                   currentModel={selectedModel}
                   onRetry={handleReload}
                   onModelChange={setSelectedModel}
+                  addToolResult={addToolResult}
                 />
               </div>
             ))}

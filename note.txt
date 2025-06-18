@@ -1,0 +1,6 @@
+Tavily API (Recommended)
+
+Go to: https://tavily.com/
+Sign up and get API key
+Free tier: 1,000 searches/month
+Cost: $1 per 1,000 additional searches

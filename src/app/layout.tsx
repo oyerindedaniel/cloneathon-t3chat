@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { auth } from "@/server/auth/config";
 import { BetterAuthSessionProvider } from "@/components/better-auth-session-provider";
-import { CONVERSATION_QUERY_LIMIT } from "@/app/constants/conversations";
+import { CONVERSATION_QUERY_LIMIT } from "@/constants/conversations";
 import { headers } from "next/headers";
 import { TRPCReactProvider } from "@/trpc/react";
 import { api, HydrateClient, caller } from "@/trpc/server";
 import { dehydrate, QueryClient } from "@tanstack/react-query";
 import { getQueryKey } from "@trpc/react-query";
+import { ToastProvider } from "@/contexts/toast-context";
+import { ToastDisplay } from "@/components/ui/toast-display";
 
 import "./globals.css";
 import "./syntax-highlighter.css";
@@ -80,11 +82,14 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <BetterAuthSessionProvider initialSession={session}>
-          <TRPCReactProvider dehydratedState={dehydratedState}>
-            {children}
-          </TRPCReactProvider>
-        </BetterAuthSessionProvider>
+        <ToastProvider>
+          <BetterAuthSessionProvider initialSession={session}>
+            <TRPCReactProvider dehydratedState={dehydratedState}>
+              {children}
+            </TRPCReactProvider>
+          </BetterAuthSessionProvider>
+          <ToastDisplay />
+        </ToastProvider>
       </body>
     </html>
   );

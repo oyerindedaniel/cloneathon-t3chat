@@ -9,3 +9,25 @@ export function getBaseUrl() {
 
   return "http://localhost:3000";
 }
+
+export function tryParseJson<T = unknown>(input: unknown): T | undefined {
+  if (typeof input !== "string") {
+    return input ? (input as T) : undefined;
+  }
+
+  try {
+    return JSON.parse(input) as T;
+  } catch {
+    return undefined;
+  }
+}
+
+export function tryStringifyJson(input: unknown): string | undefined {
+  if (typeof input === "string") return input;
+
+  try {
+    return JSON.stringify(input);
+  } catch {
+    return undefined;
+  }
+}
