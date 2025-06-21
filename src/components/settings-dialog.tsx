@@ -27,6 +27,7 @@ import {
   Loader2,
   CheckCircle,
   Keyboard,
+  ConstructionIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -38,6 +39,7 @@ import { useRouter } from "next/navigation";
 import { ApiKeyStats } from "@/components/api-key-stats";
 import { ShortcutBadge } from "@/components/ui/shortcut-badge";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useChatConfig } from "@/contexts/chat-context";
 
 type Section = "settings" | "api-keys" | "shortcuts";
 
@@ -58,11 +60,12 @@ export function SettingsDialog({
 
   const { user, signOut } = useAuth();
   const { copied, copy } = useClipboard();
-  const { toast, showToast } = useToast();
+  const { showToast } = useToast();
   const { shortcuts, getShortcutDisplay } = useKeyboardShortcuts();
 
+  const { selectedModel } = useChatConfig();
+
   const utils = api.useUtils();
-  const router = useRouter();
 
   const queryOptions = {
     refetchOnWindowFocus: false,
@@ -104,12 +107,12 @@ export function SettingsDialog({
     },
   });
 
-  const currentModel =
-    typeof window !== "undefined"
-      ? localStorage.getItem("selectedModel") || "gpt-4o-mini"
-      : "gpt-4o-mini";
+  const currentModelData = AVAILABLE_MODELS.find((m) => m.id === selectedModel);
 
-  const currentModelData = AVAILABLE_MODELS.find((m) => m.id === currentModel);
+  console.log({
+    currentModelData,
+    selectedModel,
+  });
 
   useEffect(() => {
     if (open && defaultSection) {

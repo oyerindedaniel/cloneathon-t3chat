@@ -75,7 +75,7 @@ export const ChatMessage = memo(function ChatMessage({
               return (
                 <ReasoningDisplay
                   key={`reasoning-${index}`}
-                  reasoning={reasoningPart.reasoning}
+                  reasoningPart={reasoningPart}
                   isStreaming={status === "streaming"}
                 />
               );

@@ -17,6 +17,8 @@ import { ErrorAlert } from "@/components/error-alert";
 import { useSettingsDialog } from "@/hooks/use-settings-dialog";
 import { ConnectionStatus } from "@/components/ui/connection-status";
 import { useConnectionStatus } from "@/hooks/use-connection-status";
+import { useGuestStorage } from "@/contexts/guest-storage-context";
+import { v4 as uuidv4 } from "uuid";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
@@ -65,6 +67,8 @@ export default function ChatPage() {
     onOpenSettings: openSettings,
   });
 
+  const guestStorage = useGuestStorage();
+
   useEffect(() => {
     if (id && !isNavigatingToNewChat) {
       setCurrentConversationId(id);
@@ -76,6 +80,14 @@ export default function ChatPage() {
       if (!message.trim() || status === "streaming") return;
 
       try {
+        if (isGuest) {
+          guestStorage.addMessage(id!, {
+            id: uuidv4(),
+            role: "user",
+            content: message,
+            createdAt: new Date(),
+          });
+        }
         append({
           role: "user",
           content: message,
@@ -84,7 +96,7 @@ export default function ChatPage() {
         handleApiError(error, "sending message");
       }
     },
-    [status, handleApiError, append]
+    [status, handleApiError, append, isGuest, guestStorage, id]
   );
 
   const handleReload = () => {

@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useRef, useEffect } from "react";
 import { createContext, useContextSelector } from "use-context-selector";
-import { useChat as useAIChat, useCompletion } from "@ai-sdk/react";
+import { useChat as useAIChat } from "@ai-sdk/react";
 import { createIdGenerator, Message } from "ai";
 import { useAuth } from "@/hooks/use-auth";
 import { useConversation } from "@/hooks/use-conversations";
@@ -92,8 +92,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const utils = api.useUtils();
   const updateTitle = api.conversations.updateTitle.useMutation();
 
-  const titleId = `title-${currentConversationId ?? uuidv4()}`;
-
   const {
     conversation,
     status: conversationStatus,
@@ -106,23 +104,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     isFirstConversationTitleCreated.current = !!conversation;
   }, [conversation]);
 
-  const titleCompletion = useCompletion({
-    id: titleId,
-    api: "/api/generate-title",
-    onFinish: (result) => {
-      isFirstConversationTitleCreated.current = true;
-    },
-    onError: (error) => {
-      console.error("Title generation failed:", error);
-    },
-  });
-
   const initialMessages = React.useMemo<AIMessage[]>(() => {
     if (isGuest && currentConversationId) {
       const guestConversation = guestStorage.getConversation(
         currentConversationId
       );
-      console.log("initialMessages", guestConversation);
       return guestConversation?.messages || [];
     }
 
@@ -184,10 +170,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (!isFirstConversationTitleCreated.current) {
-          await updateConversationTitle(currentConversationIdRef.current, [
-            ...chat.messages,
-            message,
-          ]);
+          await updateConversationTitle(currentConversationIdRef.current);
         }
       }
     },
@@ -234,30 +217,37 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setMessages: chat.setMessages,
   });
 
-  const generateTitle = useCallback(
-    async (messages: AIMessage[]): Promise<string | null> => {
-      try {
-        const result = await titleCompletion.complete("", {
-          body: { messages },
-        });
+  const chatMessagesRef = useLatestValue(chat.messages);
 
-        console.log({ result });
+  const generateTitle = useCallback(async (): Promise<string | null> => {
+    try {
+      const conversationTextMessages = chatMessagesRef.current;
+      const response = await fetch("/api/generate-title", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ messages: conversationTextMessages }),
+      });
 
-        return result || null;
-      } catch (error) {
-        console.error("Title generation failed:", error);
-        return null;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    },
-    [titleCompletion]
-  );
+
+      const title = await response.text();
+      isFirstConversationTitleCreated.current = true;
+      return title;
+    } catch (error) {
+      console.error("Title generation failed:", error);
+      return null;
+    }
+  }, [chat.messages]);
 
   const updateConversationTitle = useCallback(
-    async (conversationId: string, messages: AIMessage[]) => {
-      if (!conversationId || messages.length === 0) return;
+    async (conversationId: string) => {
+      if (!conversationId) return;
 
-      console.log("in update conversiotn tit");
-      const newTitle = await generateTitle(messages);
+      const newTitle = await generateTitle();
 
       try {
         if (isGuest) {
@@ -321,13 +311,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
         if (isGuest) {
           guestStorage.addConversation({
-            id: conversationId,
-            title: initialTitle,
-            model: effectiveModelId,
-            messages: [],
-          });
-
-          console.log({
             id: conversationId,
             title: initialTitle,
             model: effectiveModelId,
@@ -417,35 +400,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const handleSubmit = useCallback(
-    (event?: { preventDefault?: () => void }) => {
-      if (isGuest && !guestStorage.canAddMessage()) {
-        event?.preventDefault?.();
-        return;
-      }
-
-      // review this currenty not used it mearnt to save USER chat message for GUEST
-      if (isGuest && currentConversationId && chat.input.trim()) {
-        console.log({
-          id: uuidv4(),
-          role: "user",
-          content: chat.input.trim(),
-        });
-        guestStorage.addMessage(currentConversationId, {
-          id: uuidv4(),
-          role: "user",
-          content: chat.input.trim(),
-        });
-      }
-
-      // chat.handleSubmit(event);
-    },
-    [chat, isGuest, guestStorage, currentConversationId]
-  );
-
   const value: ChatContextType = {
     ...chat,
-    handleSubmit,
     selectedModel,
     setSelectedModel,
     currentConversationId,

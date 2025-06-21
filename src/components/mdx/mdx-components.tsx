@@ -245,13 +245,12 @@ const Pre = ({
   const { theme } = useTheme();
   const [showLineNumbers, setShowLineNumbers] = useState(true);
 
-  // Simple extraction based on the debug output
   let language = "text";
   let code = "";
 
   if (React.isValidElement(children)) {
     const codeElement = children as React.ReactElement<{
-      className?: string;
+      className?: React.HTMLAttributes<HTMLDivElement>["className"];
       children?: string;
     }>;
 

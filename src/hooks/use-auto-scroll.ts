@@ -248,9 +248,10 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
           scrollMessageToTop();
         }, 100); // Small delay to ensure DOM is updated
       } else {
-        scrollToAssistantMessageBottom();
         console.log("valid scrollToEnd");
-        setTimeout(() => {}, 100);
+        setTimeout(() => {
+          scrollToAssistantMessageBottom();
+        }, 100);
       }
     },
     [scrollMessageToTop]
@@ -280,12 +281,9 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   }, [messages, handleNewMessage, isStreaming, isReady]);
 
   useEffect(() => {
-    if (isStreaming) {
-      scrollToAssistantMessageTop();
-    }
-  }, [isStreaming]);
+    scrollToEndIfRoomAvailable();
+  }, []);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (spaceTimeoutRef.current) {

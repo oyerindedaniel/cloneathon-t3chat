@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 
 interface SignupFormProps {
-  className?: string;
+  className?: React.HTMLAttributes<HTMLDivElement>["className"];
   callbackURL?: string;
 }
 

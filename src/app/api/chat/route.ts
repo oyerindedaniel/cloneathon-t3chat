@@ -37,18 +37,6 @@ import { v4 as uuidv4 } from "uuid";
 
 export const maxDuration = 60;
 
-const REASONING_MODELS = new Set([
-  "deepseek/deepseek-r1",
-  "deepseek/deepseek-r1:free",
-  "deepseek/deepseek-r1-distill-llama-70b",
-  "microsoft/phi-4-reasoning-plus:free",
-  "anthropic/claude-3.7-sonnet",
-  "google/gemini-flash-thinking-exp",
-  "openai/o1-preview",
-  "openai/o1-mini",
-  "x-ai/grok-2-reasoning-beta",
-]);
-
 interface ReqJson {
   message: UIMessage;
   id: string | null;
@@ -65,11 +53,6 @@ const serverMessageIdGenerator = createIdGenerator({
   prefix: "msgs",
   size: 16,
 });
-
-function supportsReasoning(modelId: string): boolean {
-  const [base] = modelId.split("@")[0].split(":");
-  return Array.from(REASONING_MODELS).some((model) => model.startsWith(base));
-}
 
 async function getApiKey(): Promise<string> {
   const cookieStore = await cookies();
@@ -176,10 +159,6 @@ async function saveChat({
                 completion: usage.completionTokens,
                 total: usage.totalTokens,
               },
-            }),
-          ...(supportsReasoning(modelId) &&
-            message.role === "assistant" && {
-              reasoning: true,
             }),
         };
 
@@ -363,7 +342,7 @@ export async function POST(req: Request) {
       lastMessage,
     ]);
 
-    console.log({ coreMessages });
+    // console.log({ coreMessages });
 
     const streamId = generateId();
 
@@ -434,7 +413,13 @@ export async function POST(req: Request) {
             }
           },
           onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
-            // your own logic, e.g. for saving the chat history or recording usage
+            console.log("onStepFinish", {
+              text,
+              toolCalls,
+              toolResults,
+              finishReason,
+              usage,
+            });
           },
           onChunk: (event) => {
             if (event.chunk.type === "text-delta") {

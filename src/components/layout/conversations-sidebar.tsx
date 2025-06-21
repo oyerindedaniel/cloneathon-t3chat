@@ -92,8 +92,6 @@ export function ConversationsSidebar() {
     }));
   }, [isGuest, guestStorage.conversations, conversations]);
 
-  console.log({ isGuest, conversations });
-
   const filteredDisplayConversations: DisplayConversation[] = useMemo(() => {
     return allConversations.filter((conversation) =>
       conversation.title.toLowerCase().includes(searchQuery.toLowerCase())

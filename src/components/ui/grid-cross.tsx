@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 
 interface GridCrossProps {
-  className?: string;
+  className?: React.HTMLAttributes<HTMLDivElement>["className"];
   position?: "tl" | "tr" | "bl" | "br" | "center" | "relative";
   size?: "sm" | "md" | "lg";
   opacity?: number;

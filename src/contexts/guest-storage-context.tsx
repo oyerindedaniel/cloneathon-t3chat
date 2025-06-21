@@ -101,7 +101,8 @@ export function GuestStorageProvider({
       };
 
       setGuestData((prev) => {
-        const newTotalMessages = prev.totalMessages + 1;
+        const newTotalMessages =
+          prev.totalMessages + (message.role === "assistant" ? 1 : 0);
 
         return {
           ...prev,

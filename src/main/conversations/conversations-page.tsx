@@ -50,7 +50,8 @@ export default function ConversationsPage() {
 
   const [autosizeRef, resize] = useAutosizeTextArea(130);
 
-  const [emptyRef, isEmpty] = useUncontrolledInputEmpty();
+  const [emptyRef, isEmpty, , , updateIsEmptyState] =
+    useUncontrolledInputEmpty();
 
   const textAreaRef = useCombinedRefs(autosizeRef, emptyRef);
 
@@ -105,9 +106,10 @@ export default function ConversationsPage() {
       const inputRef = emptyRef.current;
       if (!isAtLimit && inputRef) {
         inputRef.value = title;
+        updateIsEmptyState();
       }
     },
-    [isAtLimit]
+    [isAtLimit, updateIsEmptyState]
   );
 
   const handleImageAttach = () => {
