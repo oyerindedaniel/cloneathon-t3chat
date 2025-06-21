@@ -13,6 +13,8 @@ export interface AIModel {
     | "Object Generation"
     | "Tool Usage"
     | "Tool Streaming"
+    | "Audio Input"
+    | "Extended Thinking"
   )[];
   recommended?: boolean;
   free?: boolean;
@@ -24,12 +26,89 @@ export interface AIModel {
 export const AVAILABLE_MODELS: AIModel[] = [
   // Premium Models (Recommended but require credits)
   {
-    id: "openai/gpt-4o",
+    id: "anthropic/claude-3.5-haiku",
+    name: "Claude 3.5 Haiku",
+    provider: "Anthropic",
+    description: "Fast and efficient for everyday tasks",
+    maxTokens: 8192,
+    costPer1kTokens: {
+      input: 0.0008,
+      output: 0.004,
+    },
+    capabilities: ["Tool Usage"],
+    disabled: true,
+    disabledReason: "Requires credits - upgrade to use premium models",
+  },
+  {
+    id: "anthropic/claude-3.7-sonnet",
+    name: "Claude 3.7 Sonnet",
+    provider: "Anthropic",
+    description:
+      "Hybrid reasoning model with instant or extended step-by-step thinking",
+    maxTokens: 200000,
+    costPer1kTokens: {
+      input: 0.003,
+      output: 0.015,
+    },
+    capabilities: ["Tool Usage", "Extended Thinking"],
+    supportsImages: true,
+    disabled: true,
+  },
+  {
+    id: "anthropic/claude-3-7-sonnet-20250219:thinking",
+    name: "Claude 3.7 Sonnet (Thinking)",
+    provider: "Anthropic",
+    description:
+      "Hybrid reasoning model with instant or extended step-by-step thinking",
+    maxTokens: 200000,
+    costPer1kTokens: {
+      input: 0.003,
+      output: 0.015,
+    },
+    capabilities: ["Tool Usage", "Extended Thinking"],
+    supportsImages: true,
+    disabled: true,
+  },
+  {
+    id: "anthropic/claude-opus-4",
+    name: "Claude Opus 4",
+    provider: "Anthropic",
+    description:
+      "World's best coding model with sustained performance on complex tasks",
+    maxTokens: 200000,
+    costPer1kTokens: {
+      input: 0.015,
+      output: 0.075,
+    },
+    capabilities: [],
+    supportsImages: true,
+    disabled: true,
+  },
+  {
+    id: "anthropic/claude-sonnet-4",
+    name: "Claude Sonnet 4",
+    provider: "Anthropic",
+    description:
+      "Enhanced coding and reasoning model with state-of-the-art performance",
+    maxTokens: 200000,
+    costPer1kTokens: {
+      input: 0.003,
+      output: 0.015,
+    },
+    capabilities: [],
+    supportsImages: true,
+    disabled: true,
+  },
+  {
+    id: "openai/chatgpt-4o-latest",
     name: "GPT-4o",
     provider: "OpenAI",
     description: "Most advanced model with vision and reasoning capabilities",
     maxTokens: 4096,
-    costPer1kTokens: { input: 0.005, output: 0.015 },
+    costPer1kTokens: {
+      input: 0.005,
+      output: 0.015,
+    },
     capabilities: ["Image Input", "Tool Usage", "Tool Streaming"],
     recommended: true,
     supportsImages: true,
@@ -42,7 +121,10 @@ export const AVAILABLE_MODELS: AIModel[] = [
     provider: "OpenAI",
     description: "Faster and more cost-effective version of GPT-4o",
     maxTokens: 4096,
-    costPer1kTokens: { input: 0.0015, output: 0.006 },
+    costPer1kTokens: {
+      input: 0.0015,
+      output: 0.006,
+    },
     capabilities: ["Image Input", "Tool Usage"],
     recommended: true,
     supportsImages: true,
@@ -50,38 +132,45 @@ export const AVAILABLE_MODELS: AIModel[] = [
     disabledReason: "Requires credits - upgrade to use premium models",
   },
   {
-    id: "anthropic/claude-3.5-sonnet",
-    name: "Claude 3.5 Sonnet",
-    provider: "Anthropic",
-    description: "Excellent for analysis, coding, and creative tasks",
-    maxTokens: 8192,
-    costPer1kTokens: { input: 0.003, output: 0.015 },
-    capabilities: ["Tool Usage", "Tool Streaming"],
+    id: "openai/codex-mini",
+    name: "Codex Mini",
+    provider: "OpenAI",
+    description: "Fine-tuned version of o4-mini for Codex CLI",
+    maxTokens: 200000,
+    costPer1kTokens: {
+      input: 0.0015,
+      output: 0.006,
+    },
+    capabilities: [],
     disabled: true,
-    disabledReason: "Requires credits - upgrade to use premium models",
   },
   {
-    id: "anthropic/claude-3.5-haiku",
-    name: "Claude 3.5 Haiku",
-    provider: "Anthropic",
-    description: "Fast and efficient for everyday tasks",
-    maxTokens: 8192,
-    costPer1kTokens: { input: 0.0008, output: 0.004 },
-    capabilities: ["Tool Usage"],
-    disabled: true,
-    disabledReason: "Requires credits - upgrade to use premium models",
-  },
-  {
-    id: "google/gemini-pro",
-    name: "Gemini Pro",
+    id: "google/gemini-2.5-flash-preview-05-20",
+    name: "Gemini 2.5 Flash Preview 05-20",
     provider: "Google",
-    description: "Google's advanced AI with multimodal understanding",
-    maxTokens: 2048,
-    costPer1kTokens: { input: 0.0005, output: 0.0015 },
+    description:
+      "State-of-the-art model for advanced reasoning and multimodal tasks",
+    maxTokens: 1050000,
+    costPer1kTokens: {
+      input: 0.00015,
+      output: 0.0006,
+    },
     capabilities: ["Image Input", "Tool Usage"],
     supportsImages: true,
     disabled: true,
-    disabledReason: "Requires credits - upgrade to use premium models",
+  },
+  {
+    id: "deepseek/deepseek-r1-0528",
+    name: "R1 0528",
+    provider: "DeepSeek",
+    description: "Open-source model with performance on par with OpenAI o1",
+    maxTokens: 131072,
+    costPer1kTokens: {
+      input: 0.0005,
+      output: 0.00215,
+    },
+    capabilities: [],
+    disabled: true,
   },
 
   // Free Models (Available without credits)
@@ -200,8 +289,8 @@ export const MODEL_CATEGORIES = {
     m.capabilities.includes("Tool Usage")
   ),
   powerful: [
-    AVAILABLE_MODELS.find((m) => m.id === "openai/gpt-4o")!,
-    AVAILABLE_MODELS.find((m) => m.id === "anthropic/claude-3.5-sonnet")!,
+    AVAILABLE_MODELS.find((m) => m.id === "openai/chatgpt-4o-latest")!,
+    AVAILABLE_MODELS.find((m) => m.id === "anthropic/claude-opus-4")!,
   ].filter(Boolean),
   costEffective: AVAILABLE_MODELS.filter((m) => m.free),
   toolStreaming: AVAILABLE_MODELS.filter((m) =>

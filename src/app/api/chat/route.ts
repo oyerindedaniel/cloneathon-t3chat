@@ -8,9 +8,12 @@ import {
   appendResponseMessages,
   appendClientMessage,
   createIdGenerator,
-  tool,
+  UIMessage,
+  NoSuchToolError,
+  InvalidToolArgumentsError,
+  ToolExecutionError,
+  ToolCallRepairError,
 } from "ai";
-import { z } from "zod";
 import { getSession } from "@/server/auth/session";
 import { db } from "@/server/db";
 import { conversations, messages, type NewMessage } from "@/server/db/schema";
@@ -29,36 +32,51 @@ import {
   getMessagesByChatId,
 } from "@/lib/resumable-stream";
 import { buildExcludedSetClause } from "@/lib/utils/upsert";
+import { createWebSearchTool, getLocationTool } from "@/lib/ai/tools";
+import { v4 as uuidv4 } from "uuid";
 
 export const maxDuration = 60;
 
-const REASONING_MODELS = new Set([
-  "deepseek/deepseek-r1",
-  "deepseek/deepseek-r1:free",
-  "deepseek/deepseek-r1-distill-llama-70b",
-  "microsoft/phi-4-reasoning-plus:free",
-  "anthropic/claude-3.7-sonnet",
-  "google/gemini-flash-thinking-exp",
-  "openai/o1-preview",
-  "openai/o1-mini",
-  "x-ai/grok-2-reasoning-beta",
-]);
+interface ReqJson {
+  message: UIMessage;
+  id: string | null;
+  isWebSearchEnabled: boolean;
+  modelId: string;
+  userLocation: {
+    timezone: string;
+    city?: string;
+    country?: string;
+  };
+}
 
 const serverMessageIdGenerator = createIdGenerator({
   prefix: "msgs",
   size: 16,
 });
 
-function supportsReasoning(modelId: string): boolean {
-  const [base] = modelId.split("@")[0].split(":");
-  return Array.from(REASONING_MODELS).some((model) => model.startsWith(base));
-}
-
 async function getApiKey(): Promise<string> {
   const cookieStore = await cookies();
   const userApiKey = cookieStore.get("apikey_openrouter");
 
   return userApiKey?.value || process.env.OPENROUTER_API_KEY!;
+}
+
+async function getOrCreateGuestId(): Promise<string> {
+  const cookieStore = await cookies();
+  let guestId = cookieStore.get("guest_id")?.value;
+
+  if (!guestId) {
+    guestId = uuidv4();
+    cookieStore.set("guest_id", guestId, {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+  }
+
+  return guestId;
 }
 
 async function saveChat({
@@ -142,10 +160,6 @@ async function saveChat({
                 total: usage.totalTokens,
               },
             }),
-          ...(supportsReasoning(modelId) &&
-            message.role === "assistant" && {
-              reasoning: true,
-            }),
         };
 
         const messageData: NewMessage = {
@@ -204,7 +218,8 @@ export async function POST(req: Request) {
       id: conversationId,
       modelId,
       userLocation,
-    } = await req.json();
+      isWebSearchEnabled,
+    } = (await req.json()) as ReqJson;
 
     console.log("api", {
       message: lastMessage,
@@ -263,11 +278,17 @@ export async function POST(req: Request) {
         .limit(1);
 
       if (!existingConversation[0]) {
-        const title =
-          lastMessage.content?.slice(0, 50) +
+        let title;
+
+        if (lastMessage?.content) {
+          title =
+            lastMessage.content.slice(0, 50) +
             (lastMessage.content && lastMessage.content.length > 50
               ? "..."
-              : "") || "New Chat";
+              : "");
+        }
+
+        title = "New Chat";
 
         await db.insert(conversations).values({
           id: conversationId,
@@ -308,9 +329,11 @@ export async function POST(req: Request) {
     const systemMessage = generateSystemMessage({
       modelId,
       userTimezone: userLocation?.timezone,
-      userLocation: userLocation?.city
-        ? `${userLocation.city}, ${userLocation.country}`
-        : userLocation?.country,
+      ...(userLocation?.country && {
+        location: userLocation?.city
+          ? `${userLocation.city}, ${userLocation.country}`
+          : userLocation.country,
+      }),
       conversationContext,
     });
 
@@ -318,6 +341,8 @@ export async function POST(req: Request) {
       { role: "system", content: systemMessage },
       lastMessage,
     ]);
+
+    // console.log({ coreMessages });
 
     const streamId = generateId();
 
@@ -343,83 +368,111 @@ export async function POST(req: Request) {
       }
     }
 
-    // const stream = createDataStream({
-    //   execute: (dataStream) => {
-    //     const result = streamText({
-    //       model: openrouter.chat(modelId),
-    //       messages: coreMessages,
-    //       temperature: 0.7,
-    //       maxTokens: 1000,
-    //       experimental_transform: smoothStream(),
-    //       experimental_generateMessageId: serverMessageIdGenerator,
-    //       toolChoice: "auto",
-    //       // tools: webSearchEnabled ? { webSearch: webSearchTool } : undefined, // Conditionally enable web search
-    //       // maxSteps: webSearchEnabled ? 5 : 1, // Allow multi-step if web search is enabled
-    //       ...(supportsReasoning(modelId) && {
-    //         reasoning: {
-    //           effort: "high",
-    //           exclude: false,
-    //         },
-    //       }),
-    //       onError({ error }) {
-    //         const errorInfo = getErrorDisplayInfo(error);
-    //         console.error(
-    //           "Streaming error:",
-    //           errorInfo.title,
-    //           errorInfo.message
-    //         );
-    //       },
-    //       onChunk: (event) => {
-    //         if (event.chunk.type === "text-delta") {
-    //           console.log("----------------------text", event.chunk.textDelta);
-    //         }
+    const userId = session?.user?.id ?? (await getOrCreateGuestId());
 
-    //         if (event.chunk.type === "reasoning") {
-    //           console.log(
-    //             "----------------------reasoning",
-    //             event.chunk.textDelta
-    //           );
-    //         }
-    //       },
-    //       onFinish: async ({ response, usage }) => {
-    //         if (isAuthenticated && conversationId && session?.user?.id) {
-    //           const responseTime = performance.now() - requestStartTime;
+    const stream = createDataStream({
+      execute: (dataStream) => {
+        const result = streamText({
+          model: openrouter.chat(modelId, {
+            user: userId,
+            reasoning: {
+              effort: "medium",
+            },
+            usage: {
+              include: true,
+            },
+          }),
+          messages: coreMessages,
+          temperature: 0.7,
+          maxTokens: 1000,
+          experimental_transform: smoothStream(),
+          experimental_generateMessageId: serverMessageIdGenerator,
+          toolChoice: "auto",
+          toolCallStreaming: true,
+          tools: {
+            web_search: createWebSearchTool(isWebSearchEnabled),
+            get_location: getLocationTool,
+          },
+          maxSteps: isWebSearchEnabled ? 5 : 1,
+          onError({ error }) {
+            if (NoSuchToolError.isInstance(error)) {
+              console.error("AI SDK Error: No Such Tool", error);
+            } else if (InvalidToolArgumentsError.isInstance(error)) {
+              console.error("AI SDK Error: Invalid Tool Arguments", error);
+            } else if (ToolExecutionError.isInstance(error)) {
+              console.error("AI SDK Error: Tool Execution Failed", error);
+            } else if (ToolCallRepairError.isInstance(error)) {
+              console.error("AI SDK Error: Tool Call Repair Failed", error);
+            } else {
+              const errorInfo = getErrorDisplayInfo(error);
+              console.error(
+                "Streaming error:",
+                errorInfo.title,
+                errorInfo.message
+              );
+            }
+          },
+          onStepFinish({ text, toolCalls, toolResults, finishReason, usage }) {
+            console.log("onStepFinish", {
+              text,
+              toolCalls,
+              toolResults,
+              finishReason,
+              usage,
+            });
+          },
+          onChunk: (event) => {
+            if (event.chunk.type === "text-delta") {
+              console.log("----------------------text", event.chunk.textDelta);
+            }
 
-    //           const updatedMessages = appendResponseMessages({
-    //             messages: allMessages,
-    //             responseMessages: response.messages,
-    //           });
+            if (event.chunk.type === "reasoning") {
+              console.log(
+                "----------------------reasoning",
+                event.chunk.textDelta
+              );
+            }
+          },
+          onFinish: async ({ response, usage }) => {
+            if (isAuthenticated && conversationId && session?.user?.id) {
+              const responseTime = performance.now() - requestStartTime;
 
-    //           const assistantMessages = updatedMessages.filter(
-    //             (msg) =>
-    //               msg.role === "assistant" &&
-    //               !allMessages.some((existing) => existing.id === msg.id)
-    //           );
+              const updatedMessages = appendResponseMessages({
+                messages: allMessages,
+                responseMessages: response.messages,
+              });
 
-    //           if (assistantMessages.length > 0) {
-    //             await saveChat({
-    //               id: conversationId,
-    //               messages: assistantMessages,
-    //               modelId,
-    //               userId: session.user.id,
-    //               responseTime,
-    //               usage,
-    //             });
-    //           }
-    //         }
-    //       },
-    //     });
+              const assistantMessages = updatedMessages.filter(
+                (msg) =>
+                  msg.role === "assistant" &&
+                  !allMessages.some((existing) => existing.id === msg.id)
+              );
 
-    //     result.consumeStream();
+              if (assistantMessages.length > 0) {
+                await saveChat({
+                  id: conversationId,
+                  messages: assistantMessages,
+                  modelId,
+                  userId: session.user.id,
+                  responseTime,
+                  usage,
+                });
+              }
+            }
+          },
+        });
 
-    //     result.mergeIntoDataStream(dataStream, {
-    //       sendReasoning: true,
-    //     });
-    //   },
-    // });
+        result.consumeStream();
 
-    return new Response();
-    // await streamContext.resumableStream(streamId, () => stream)
+        result.mergeIntoDataStream(dataStream, {
+          sendReasoning: true,
+        });
+      },
+    });
+
+    return new Response(
+      await streamContext.resumableStream(streamId, () => stream)
+    );
   } catch (error) {
     console.error("Chat API error:", error);
 

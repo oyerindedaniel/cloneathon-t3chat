@@ -1,11 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
+  rewrites: async () => {
     return [
       {
-        source: "/((?!api|_next/static|_next/image|favicon.ico).*)",
-        destination: "/",
+        source: "/((?!api/).*)",
+        destination: "/static-app-shell",
       },
     ];
   },

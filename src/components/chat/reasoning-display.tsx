@@ -1,24 +1,31 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Copy, ChevronDown, ChevronUp, Brain } from "lucide-react";
 import { useClipboard } from "@/hooks/use-clipboard";
+import { ReasoningUIPart } from "@ai-sdk/ui-utils";
 
 interface ReasoningDisplayProps {
-  reasoning?: string;
+  reasoningPart?: ReasoningUIPart;
   isStreaming?: boolean;
   className?: React.HTMLAttributes<HTMLDivElement>["className"];
 }
 
 export function ReasoningDisplay({
-  reasoning,
+  reasoningPart,
   isStreaming = false,
   className,
 }: ReasoningDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [displayText, setDisplayText] = useState("");
   const { copied, copy } = useClipboard();
+
+  const reasoning = useMemo(() => {
+    return reasoningPart?.details
+      .map((detail) => (detail.type === "text" ? detail.text : "<redacted>"))
+      .join("");
+  }, [reasoningPart]);
 
   useEffect(() => {
     if (!reasoning) return;

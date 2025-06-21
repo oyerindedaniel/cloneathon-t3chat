@@ -359,6 +359,30 @@ export const streamIds = createTable(
   ]
 );
 
+export const conversationShares = createTable(
+  "conversation_share",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    conversationId: uuid("conversation_id")
+      .references(() => conversations.id, { onDelete: "cascade" })
+      .notNull(),
+    shareId: varchar("share_id", { length: 50 }).unique().notNull(),
+    sharedAt: timestamp("shared_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date()
+    ),
+  },
+  (t) => [
+    index("conversation_share_conversation_id_idx").on(t.conversationId),
+    index("conversation_share_share_id_idx").on(t.shareId),
+  ]
+);
+
 // ================================
 // RELATIONS
 // ================================
@@ -497,7 +521,7 @@ export type NewVerification = typeof verification.$inferInsert;
 export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;
 
-export type Message = typeof messages.$inferSelect;
+export type Message = typeof messages.$inferSelect & AiMessage;
 export type NewMessage = typeof messages.$inferInsert;
 
 export type Attachment = typeof attachments.$inferSelect;

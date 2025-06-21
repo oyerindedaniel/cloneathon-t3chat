@@ -1,6 +1,6 @@
 import { api } from "@/trpc/react";
 import { useSession } from "./use-auth";
-import { CONVERSATION_QUERY_LIMIT } from "@/app/constants/conversations";
+import { CONVERSATION_QUERY_LIMIT } from "@/constants/conversations";
 import type { inferRouterOutputs } from "@trpc/server";
 import { AppRouter } from "@/server/api/root";
 
@@ -223,19 +223,24 @@ export function useConversations(searchQuery: string = "") {
 
 export function useConversation({
   id,
-  isNavigatingToNewChat,
+  isNavigatingToNewChat = false,
+  isSharedLink = false,
 }: {
   id: string | null;
-  isNavigatingToNewChat: boolean;
+  isNavigatingToNewChat?: boolean;
+  isSharedLink?: boolean;
 }) {
   const session = useSession();
 
-  const enabled = !!id && !!session?.userId && !isNavigatingToNewChat;
+  const enabledForUserConversation =
+    !!id && !!session?.userId && !isNavigatingToNewChat && !isSharedLink;
 
-  const conversation = api.conversations.getById.useQuery(
+  const enabledForSharedConversation = !!id && isSharedLink;
+
+  const conversationQuery = api.conversations.getById.useQuery(
     { id: id! },
     {
-      enabled,
+      enabled: enabledForUserConversation,
       refetchOnWindowFocus: false,
       refetchOnMount: false,
       refetchOnReconnect: false,
@@ -243,11 +248,43 @@ export function useConversation({
     }
   );
 
+  const sharedConversationQuery = api.conversations.getSharedById.useQuery(
+    { shareId: id! },
+    {
+      enabled: enabledForSharedConversation,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      retry: 1,
+    }
+  );
+
+  const conversationData = isSharedLink
+    ? sharedConversationQuery.data
+    : conversationQuery.data;
+
+  const isLoading = isSharedLink
+    ? sharedConversationQuery.isLoading
+    : conversationQuery.isLoading;
+
+  const isError = isSharedLink
+    ? sharedConversationQuery.isError
+    : conversationQuery.isError;
+
+  const error = isSharedLink
+    ? sharedConversationQuery.error
+    : conversationQuery.error;
+
+  const status = isSharedLink
+    ? sharedConversationQuery.status
+    : conversationQuery.status;
+
   return {
-    conversation: conversation.data,
-    isLoading: conversation.isLoading,
-    isError: conversation.isError,
-    error: conversation.error,
-    status: conversation.status,
+    conversation: conversationData,
+    isLoading,
+    isError,
+    error,
+    status,
+    isCurrentlyShared: isSharedLink && !!sharedConversationQuery.data,
   };
 }

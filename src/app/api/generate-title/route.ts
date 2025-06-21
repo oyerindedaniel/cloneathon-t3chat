@@ -1,6 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText, Message } from "ai";
-import { getSession } from "@/server/auth/session";
 import { TITLE_GENERATION_MODEL } from "@/lib/ai/models";
 
 export const maxDuration = 60;
@@ -13,22 +12,9 @@ export async function POST(req: Request) {
   console.log("[GENERATE_TITLE] Starting title generation request");
 
   try {
-    const session = await getSession();
-    const isAuthenticated = !!session?.user;
-
-    console.log("[GENERATE_TITLE] User authentication status:", {
-      isAuthenticated,
-      userId: session?.user?.id,
-    });
-
     const { messages } = (await req.json()) as { messages: Message[] };
-    console.log("[GENERATE_TITLE] Request payload:", {
-      messagesCount: messages?.length,
-      firstMessage: messages?.[0]?.content?.slice(0, 100) + "...",
-    });
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      console.error("[GENERATE_TITLE] Invalid messages payload");
       return new Response("Invalid messages", { status: 400 });
     }
 
@@ -37,8 +23,7 @@ export async function POST(req: Request) {
       .map((msg) => `${msg.role}: ${msg.content}`)
       .join("\n");
 
-    console.log("[GENERATE_TITLE] Using model:", TITLE_GENERATION_MODEL.id);
-    console.log("[GENERATE_TITLE] Context length:", conversationText.length);
+    console.log({ conversationText });
 
     const result = await generateText({
       model: openrouter.chat(TITLE_GENERATION_MODEL.id),
@@ -56,11 +41,9 @@ export async function POST(req: Request) {
       maxTokens: 20,
     });
 
-    const generatedTitle = result.text.trim();
-    console.log("[GENERATE_TITLE] Generated title:", generatedTitle);
-    console.log("[GENERATE_TITLE] Title generation successful");
-
-    return Response.json({ title: generatedTitle });
+    return new Response(result.text, {
+      headers: { "Content-Type": "text/plain" },
+    });
   } catch (error) {
     console.error("[GENERATE_TITLE] Title generation error:", {
       error: error instanceof Error ? error.message : error,

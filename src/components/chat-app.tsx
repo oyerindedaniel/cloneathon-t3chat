@@ -9,14 +9,16 @@ import {
 } from "react-router-dom";
 import { ConversationsLayout } from "@/components/layout/conversations-layout";
 import { useAuth } from "@/hooks/use-auth";
-import LoginPage from "@/pages/auth/login-page";
-import SignupPage from "@/pages/auth/signup-page";
-import ConversationsPage from "@/pages/conversations/conversations-page";
-import ChatPage from "@/pages/conversations/chat-page";
+import LoginPage from "@/main/auth/login-page";
+import SignupPage from "@/main/auth/signup-page";
+import ConversationsPage from "@/main/conversations/conversations-page";
+import ChatPage from "@/main/conversations/chat-page";
 import { ThemeProvider } from "./theme-provider";
 import { ChatProvider } from "@/contexts/chat-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
+import { GuestStorageProvider } from "@/contexts/guest-storage-context";
+// import SharedConversationPage from "@/main/conversations/shared-conversation-page";
 
 function ConversationsWrapper() {
   const { user } = useAuth();
@@ -38,21 +40,27 @@ export default function ChatApp() {
         disableTransitionOnChange
       >
         <TooltipProvider>
-          <ChatProvider>
-            <KeyboardShortcuts />
-            <Routes>
-              <Route
-                path="/"
-                element={<Navigate to="/conversations" replace />}
-              />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/conversations" element={<ConversationsWrapper />}>
-                <Route index element={<ConversationsPage />} />
-                <Route path=":id" element={<ChatPage />} />
-              </Route>
-            </Routes>
-          </ChatProvider>
+          <GuestStorageProvider>
+            <ChatProvider>
+              <KeyboardShortcuts />
+              <Routes>
+                <Route
+                  path="/"
+                  element={<Navigate to="/conversations" replace />}
+                />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/conversations" element={<ConversationsWrapper />}>
+                  <Route index element={<ConversationsPage />} />
+                  <Route path=":id" element={<ChatPage />} />
+                </Route>
+                {/* <Route
+                  path="/conversations/share/:shareId"
+                  element={<SharedConversationPage />}
+                /> */}
+              </Routes>
+            </ChatProvider>
+          </GuestStorageProvider>
         </TooltipProvider>
       </ThemeProvider>
     </BrowserRouter>

@@ -27,6 +27,7 @@ import {
   Loader2,
   CheckCircle,
   Keyboard,
+  ConstructionIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -38,6 +39,7 @@ import { useRouter } from "next/navigation";
 import { ApiKeyStats } from "@/components/api-key-stats";
 import { ShortcutBadge } from "@/components/ui/shortcut-badge";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useChatConfig } from "@/contexts/chat-context";
 
 type Section = "settings" | "api-keys" | "shortcuts";
 
@@ -58,11 +60,12 @@ export function SettingsDialog({
 
   const { user, signOut } = useAuth();
   const { copied, copy } = useClipboard();
-  const { toast, showToast } = useToast();
+  const { showToast } = useToast();
   const { shortcuts, getShortcutDisplay } = useKeyboardShortcuts();
 
+  const { selectedModel } = useChatConfig();
+
   const utils = api.useUtils();
-  const router = useRouter();
 
   const queryOptions = {
     refetchOnWindowFocus: false,
@@ -104,12 +107,12 @@ export function SettingsDialog({
     },
   });
 
-  const currentModel =
-    typeof window !== "undefined"
-      ? localStorage.getItem("selectedModel") || "gpt-4o-mini"
-      : "gpt-4o-mini";
+  const currentModelData = AVAILABLE_MODELS.find((m) => m.id === selectedModel);
 
-  const currentModelData = AVAILABLE_MODELS.find((m) => m.id === currentModel);
+  console.log({
+    currentModelData,
+    selectedModel,
+  });
 
   useEffect(() => {
     if (open && defaultSection) {
@@ -546,37 +549,6 @@ export function SettingsDialog({
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {toast.isVisible && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            transition={{ duration: 0.2 }}
-            className="fixed bottom-4 right-4 z-[9999]"
-            onMouseEnter={() => toast.resetTimer()}
-            onMouseLeave={() => toast.resetTimer()}
-          >
-            <div
-              className={cn(
-                "flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg border cursor-pointer",
-                toast.type === "success" &&
-                  "bg-success/50 border-success/20 text-white",
-                toast.type === "error" &&
-                  "bg-error/50 border-error/20 text-white",
-                toast.type === "info" && "bg-info/50 border-info/20 text-white"
-              )}
-            >
-              {toast.type === "success" && <CheckCircle className="w-4 h-4" />}
-              {toast.type === "error" && <AlertCircle className="w-4 h-4" />}
-              {toast.type === "info" && <AlertCircle className="w-4 h-4" />}
-              <span className="text-sm font-medium">{toast.message}</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

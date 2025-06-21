@@ -18,16 +18,18 @@ export function useAuth() {
 
   const initialSession = useBetterAuthSession();
 
-  
-  const [sessionData, setSessionData] = useState<BetterAuthCombinedSession>(initialSession);
+  const [sessionData, setSessionData] =
+    useState<BetterAuthCombinedSession>(initialSession);
 
-
-  const { data: clientSessionData, isPending, error, refetch } = authClient.useSession();
-
+  const {
+    data: clientSessionData,
+    isPending,
+    error,
+    refetch,
+  } = authClient.useSession();
 
   useEffect(() => {
     if (clientSessionData !== undefined) {
-      console.log("clientSessionData---------", clientSessionData);
       setSessionData(clientSessionData);
     }
   }, [clientSessionData]);

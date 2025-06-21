@@ -145,7 +145,7 @@ const A = ({
 }: React.HTMLAttributes<HTMLAnchorElement>) => (
   <a
     className={cn(
-      "text-accent-primary hover:text-accent-primary/80 underline underline-offset-2 transition-colors",
+      "text-primary hover:text-primary/80 underline underline-offset-2 transition-colors",
       className
     )}
     {...props}
@@ -245,13 +245,12 @@ const Pre = ({
   const { theme } = useTheme();
   const [showLineNumbers, setShowLineNumbers] = useState(true);
 
-  // Simple extraction based on the debug output
   let language = "text";
   let code = "";
 
   if (React.isValidElement(children)) {
     const codeElement = children as React.ReactElement<{
-      className?: string;
+      className?: React.HTMLAttributes<HTMLDivElement>["className"];
       children?: string;
     }>;
 
@@ -306,7 +305,7 @@ const Pre = ({
               <p>{showLineNumbers ? "Hide" : "Show"} line numbers</p>
             </TooltipContent>
           </Tooltip>
-          // TODO: make copy button sticky
+
           <Tooltip>
             <TooltipTrigger asChild>
               <button

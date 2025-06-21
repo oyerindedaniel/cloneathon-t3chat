@@ -4,13 +4,14 @@ import { useEffect, useRef, useState, useCallback } from "react";
  * Hook to track whether an uncontrolled input is empty and provide form submission capabilities.
  * It only triggers a rerender when the "empty" state changes, preventing excessive re-renders.
  *
- * @returns A tuple: [ref to attach to input, boolean isEmpty, getCurrentValue function, handleSubmit function]
+ * @returns A tuple: [ref to attach to input, boolean isEmpty, getCurrentValue function, handleSubmit function, updateState function]
  */
 export function useUncontrolledInputEmpty(): [
   React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>,
   boolean,
   () => string,
-  (onSubmit: (value: string) => void) => void
+  (onSubmit: (value: string) => void) => void,
+  () => void
 ] {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isEmpty, setIsEmpty] = useState(true);
@@ -54,5 +55,5 @@ export function useUncontrolledInputEmpty(): [
     return () => node.removeEventListener("input", handleInput);
   }, [updateState]);
 
-  return [inputRef, isEmpty, getCurrentValue, handleSubmit];
+  return [inputRef, isEmpty, getCurrentValue, handleSubmit, updateState];
 }

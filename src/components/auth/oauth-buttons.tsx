@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface OAuthButtonsProps {
-  className?: string;
+  className?: React.HTMLAttributes<HTMLDivElement>["className"];
   callbackURL?: string;
   mode?: "signin" | "signup";
 }

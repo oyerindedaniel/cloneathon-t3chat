@@ -9,14 +9,7 @@ interface SuggestionCardProps {
   icon: LucideIcon;
   onClick: () => void;
   disabled?: boolean;
-  className?: string;
-}
-
-function areEqual(
-  prev: SuggestionCardProps,
-  next: SuggestionCardProps
-): boolean {
-  return prev.title === next.title && prev.disabled === next.disabled;
+  className?: React.HTMLAttributes<HTMLDivElement>["className"];
 }
 
 export const SuggestionCard = memo(function SuggestionCard({
@@ -50,3 +43,10 @@ export const SuggestionCard = memo(function SuggestionCard({
   );
 },
 areEqual);
+
+function areEqual(
+  prev: SuggestionCardProps,
+  next: SuggestionCardProps
+): boolean {
+  return prev.title === next.title && prev.disabled === next.disabled;
+}

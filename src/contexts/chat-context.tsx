@@ -1,7 +1,7 @@
-import React, { useCallback, useState, useRef } from "react";
+import React, { useCallback, useState, useRef, useEffect } from "react";
 import { createContext, useContextSelector } from "use-context-selector";
-import { useChat as useAIChat, useCompletion } from "@ai-sdk/react";
-import { createIdGenerator } from "ai";
+import { useChat as useAIChat } from "@ai-sdk/react";
+import { createIdGenerator, Message } from "ai";
 import { useAuth } from "@/hooks/use-auth";
 import { useConversation } from "@/hooks/use-conversations";
 import { api } from "@/trpc/react";
@@ -11,11 +11,29 @@ import { Message as AIMessage } from "ai";
 import { v4 as uuidv4 } from "uuid";
 import { flushSync } from "react-dom";
 import { UseChatHelpers } from "@ai-sdk/react";
-import { useGuestStorage } from "@/hooks/use-local-storage";
+import { ToolCall, ToolResult } from "ai";
 import { useAutoResume } from "@/hooks/use-auto-resume";
-import type { BranchStatus } from "@/server/db/schema";
 import { useLatestValue } from "@/hooks/use-latest-value";
-import { CONVERSATION_QUERY_LIMIT } from "@/app/constants/conversations";
+import { useGuestStorage } from "@/contexts/guest-storage-context";
+import { CONVERSATION_QUERY_LIMIT } from "@/constants/conversations";
+import { tryParseJson } from "@/lib/utils/app";
+import type { BranchStatus } from "@/server/db/schema";
+
+type LocationToolCall = ToolCall<"getLocation", { message: string }>;
+
+export type GetLocationResult =
+  | { latitude: number; longitude: number; timezone: string }
+  | { error: "permission_denied" | "not_supported" };
+
+export type AllToolResults = ToolResult<
+  "getLocation",
+  {
+    message: string;
+  },
+  GetLocationResult
+>;
+
+export type LocationToolStatus = "awaiting_user_input";
 
 interface ChatContextType extends UseChatHelpers {
   selectedModel: string;
@@ -39,6 +57,7 @@ interface ChatContextType extends UseChatHelpers {
   maxMessages: number;
   isWebSearchEnabled: boolean;
   toggleWebSearch: () => void;
+  addToolResult: ({ toolCallId, result }: AllToolResults) => void;
 }
 
 const ChatContext = createContext<ChatContextType>(null!);
@@ -73,39 +92,24 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const utils = api.useUtils();
   const updateTitle = api.conversations.updateTitle.useMutation();
 
-  const titleId = `title-${currentConversationId ?? uuidv4()}`;
-
   const {
     conversation,
+    status: conversationStatus,
     isLoading: conversationLoading,
     isError: isConversationError,
     error: conversationError,
   } = useConversation({ id: currentConversationId, isNavigatingToNewChat });
 
-  const titleCompletion = useCompletion({
-    id: titleId,
-    api: "/api/generate-title",
-    onFinish: (result) => {
-      isFirstConversationTitleCreated.current = true;
-    },
-    onError: (error) => {
-      console.error("Title generation failed:", error);
-    },
-  });
+  useEffect(() => {
+    isFirstConversationTitleCreated.current = !!conversation;
+  }, [conversation]);
 
-  const initialMessages: AIMessage[] = React.useMemo(() => {
+  const initialMessages = React.useMemo<AIMessage[]>(() => {
     if (isGuest && currentConversationId) {
       const guestConversation = guestStorage.getConversation(
         currentConversationId
       );
-      return (
-        guestConversation?.messages.map((msg) => ({
-          id: msg.id,
-          role: msg.role,
-          content: msg.content,
-          createdAt: new Date(msg.timestamp),
-        })) || []
-      );
+      return guestConversation?.messages || [];
     }
 
     if (conversation?.messages) {
@@ -114,36 +118,136 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         role: msg.role as AIMessage["role"],
         content: msg.content,
         createdAt: new Date(msg.createdAt),
+        parts: tryParseJson<Message["parts"]>(msg.parts),
+        annotations: tryParseJson<Message["annotations"]>(msg.annotations),
+        experimental_attachments: tryParseJson<
+          Message["experimental_attachments"]
+        >(msg.attachments),
       }));
     }
 
     return [];
   }, [conversation, currentConversationId, isGuest, guestStorage]);
 
-  const generateTitle = useCallback(
-    async (messages: AIMessage[]): Promise<string | null> => {
-      try {
-        const result = await titleCompletion.complete("", {
-          body: { messages },
-        });
-
-        console.log({ result });
-
-        return result || null;
-      } catch (error) {
-        console.error("Title generation failed:", error);
-        return null;
+  const chat = useAIChat({
+    api: "/api/chat",
+    initialMessages,
+    sendExtraMessageFields: true,
+    generateId: messageIdGenerator,
+    maxSteps: 5,
+    experimental_prepareRequestBody: ({ messages }) => {
+      return {
+        message: messages[messages.length - 1],
+        id: currentConversationIdRef.current,
+        isWebSearchEnabled: isWebSearchEnabledRef.current,
+        modelId: selectedModelRef.current,
+        userLocation: {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+      };
+    },
+    onResponse: async (response) => {
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log("Chat API error in context:", response.status, errorText);
+        throw new Error(`Chat API error: ${response.status}`);
       }
     },
-    [titleCompletion]
-  );
+    onFinish: async (message) => {
+      if (currentConversationIdRef.current) {
+        if (isGuest) {
+          guestStorage.addMessage(currentConversationIdRef.current, {
+            id: message.id,
+            role: "assistant",
+            content: message.content,
+            ...(message.parts && { parts: message.parts }),
+            ...(message.annotations && { annotations: message.annotations }),
+            ...(message.experimental_attachments && {
+              experimental_attachments: message.experimental_attachments,
+            }),
+            createdAt: new Date(),
+          });
+        }
+
+        if (!isFirstConversationTitleCreated.current) {
+          await updateConversationTitle(currentConversationIdRef.current);
+        }
+      }
+    },
+    onToolCall: async ({ toolCall }) => {
+      if (toolCall.toolName === "getLocation") {
+        chat.setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            id: messageIdGenerator(),
+            role: "assistant",
+            content: "",
+            parts: {
+              type: "tool-invocation",
+              toolInvocation: {
+                toolCallId: toolCall.toolCallId,
+                toolName: toolCall.toolName,
+                state: "awaiting_user_input" as LocationToolStatus,
+                args: (toolCall as LocationToolCall).args.message,
+              },
+            },
+          } as unknown as AIMessage,
+        ]);
+      }
+    },
+    onError: (error) => {
+      console.error("Chat error:", error);
+    },
+  });
+
+  useEffect(() => {
+    if (
+      conversationStatus === "success" &&
+      chat.messages.length !== initialMessages.length
+    ) {
+      chat.setMessages(initialMessages);
+    }
+  }, [conversationStatus]);
+
+  useAutoResume({
+    autoResume: isAuthenticated && !!currentConversationId,
+    initialMessages: chat.messages,
+    experimental_resume: chat.experimental_resume,
+    data: chat.data,
+    setMessages: chat.setMessages,
+  });
+
+  const chatMessagesRef = useLatestValue(chat.messages);
+
+  const generateTitle = useCallback(async (): Promise<string | null> => {
+    try {
+      const conversationTextMessages = chatMessagesRef.current;
+      const response = await fetch("/api/generate-title", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ messages: conversationTextMessages }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const title = await response.text();
+      isFirstConversationTitleCreated.current = true;
+      return title;
+    } catch (error) {
+      console.error("Title generation failed:", error);
+      return null;
+    }
+  }, [chat.messages]);
 
   const updateConversationTitle = useCallback(
-    async (conversationId: string, messages: AIMessage[]) => {
-      if (!conversationId || messages.length === 0) return;
+    async (conversationId: string) => {
+      if (!conversationId) return;
 
-      console.log("in update conversiotn tit");
-      const newTitle = await generateTitle(messages);
+      const newTitle = await generateTitle();
 
       try {
         if (isGuest) {
@@ -182,60 +286,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     [generateTitle, isGuest, guestStorage, updateTitle, utils]
   );
 
-  const chat = useAIChat({
-    api: "/api/chat",
-    initialMessages,
-    sendExtraMessageFields: true,
-    generateId: messageIdGenerator,
-    experimental_prepareRequestBody: ({ messages }) => {
-      return {
-        message: messages[messages.length - 1],
-        id: currentConversationIdRef.current,
-        isWebSearchEnabled: isWebSearchEnabledRef.current,
-        modelId: selectedModelRef.current,
-        userLocation: {
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        },
-      };
-    },
-    onResponse: async (response) => {
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log("Chat API error in context:", response.status, errorText);
-        throw new Error(`Chat API error: ${response.status}`);
-      }
-    },
-    onFinish: async (message) => {
-      if (currentConversationIdRef.current) {
-        if (isGuest) {
-          guestStorage.addMessage(currentConversationIdRef.current, {
-            id: message.id,
-            role: "assistant",
-            content: message.content,
-          });
-        }
-
-        if (!isFirstConversationTitleCreated.current) {
-          await updateConversationTitle(currentConversationIdRef.current, [
-            ...chat.messages,
-            message,
-          ]);
-        }
-      }
-    },
-    onError: (error) => {
-      console.error("Chat error:", error);
-    },
-  });
-
-  useAutoResume({
-    autoResume: isAuthenticated && !!currentConversationId,
-    initialMessages: chat.messages,
-    experimental_resume: chat.experimental_resume,
-    data: chat.data,
-    setMessages: chat.setMessages,
-  });
-
   const setSelectedModel = useCallback((modelId: string) => {
     setSelectedModelState(modelId);
   }, []);
@@ -268,7 +318,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           });
 
           guestStorage.addMessage(conversationId, {
-            id: uuidv4(),
+            id: conversationId,
             role: "user",
             content: message,
           });
@@ -350,29 +400,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const handleSubmit = useCallback(
-    (event?: { preventDefault?: () => void }) => {
-      if (isGuest && !guestStorage.canAddMessage()) {
-        event?.preventDefault?.();
-        return;
-      }
-
-      if (isGuest && currentConversationId && chat.input.trim()) {
-        guestStorage.addMessage(currentConversationId, {
-          id: uuidv4(),
-          role: "user",
-          content: chat.input.trim(),
-        });
-      }
-
-      chat.handleSubmit(event);
-    },
-    [chat, isGuest, guestStorage, currentConversationId]
-  );
-
   const value: ChatContextType = {
     ...chat,
-    handleSubmit,
     selectedModel,
     setSelectedModel,
     currentConversationId,
@@ -391,25 +420,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     toggleWebSearch: () => setIsWebSearchEnabled((prev) => !prev),
     isConversationError,
     conversationError,
+    addToolResult: chat.addToolResult,
   };
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 }
 
 export function useChatMessages() {
-  return {
-    messages: useContextSelector(ChatContext, (state) => state.messages),
-    append: useContextSelector(ChatContext, (state) => state.append),
-    setMessages: useContextSelector(ChatContext, (state) => state.setMessages),
-    reload: useContextSelector(ChatContext, (state) => state.reload),
-    stop: useContextSelector(ChatContext, (state) => state.stop),
-    status: useContextSelector(ChatContext, (state) => state.status),
-    error: useContextSelector(ChatContext, (state) => state.error),
-    experimental_resume: useContextSelector(
-      ChatContext,
-      (state) => state.experimental_resume
-    ),
-  };
+  return useContextSelector(ChatContext, (state: ChatContextType) => ({
+    messages: state.messages,
+    append: state.append,
+    stop: state.stop,
+    reload: state.reload,
+    status: state.status,
+    error: state.error,
+    experimental_resume: state.experimental_resume,
+    addToolResult: state.addToolResult,
+  }));
 }
 
 export function useChatInput() {

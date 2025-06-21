@@ -1,6 +1,7 @@
+"use client";
+
 import { useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SendHorizontal, Sparkles, ImagePlus, Globe2 } from "lucide-react";
 import { GridCross } from "@/components/ui/grid-cross";
@@ -17,9 +18,19 @@ import { useUncontrolledInputEmpty } from "@/hooks/use-uncontrolled-input-empty"
 import { useAutosizeTextArea } from "@/hooks/use-autosize-textarea";
 import { useCombinedRefs } from "@/hooks/use-combined-ref";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function ConversationsPage() {
-  const { selectedModel, setSelectedModel } = useChatConfig();
+  const {
+    selectedModel,
+    setSelectedModel,
+    isWebSearchEnabled,
+    toggleWebSearch,
+  } = useChatConfig();
   const { startNewConversationInstant, isCreatingConversation } =
     useChatControls();
 
@@ -39,7 +50,8 @@ export default function ConversationsPage() {
 
   const [autosizeRef, resize] = useAutosizeTextArea(130);
 
-  const [emptyRef, isEmpty] = useUncontrolledInputEmpty();
+  const [emptyRef, isEmpty, , , updateIsEmptyState] =
+    useUncontrolledInputEmpty();
 
   const textAreaRef = useCombinedRefs(autosizeRef, emptyRef);
 
@@ -94,9 +106,10 @@ export default function ConversationsPage() {
       const inputRef = emptyRef.current;
       if (!isAtLimit && inputRef) {
         inputRef.value = title;
+        updateIsEmptyState();
       }
     },
-    [isAtLimit]
+    [isAtLimit, updateIsEmptyState]
   );
 
   const handleImageAttach = () => {
@@ -104,10 +117,9 @@ export default function ConversationsPage() {
     console.log("Image attach clicked");
   };
 
-  const handleWebSearchToggle = () => {
-    // This will be implemented when chat-context is updated
-    console.log("Web search toggle clicked");
-  };
+  const handleWebSearchToggle = useCallback(() => {
+    toggleWebSearch();
+  }, [toggleWebSearch]);
 
   return (
     <div className="h-full flex flex-col grid-pattern-background">
@@ -173,20 +185,29 @@ export default function ConversationsPage() {
                       disabled={effectiveDisabled}
                       variant="compact"
                     />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "w-9 h-9 shrink-0 rounded-full",
+                            isWebSearchEnabled && "bg-primary/50 text-primary"
+                          )}
+                          onClick={handleWebSearchToggle}
+                          disabled={effectiveDisabled}
+                          aria-label="Toggle web search"
+                        >
+                          <Globe2 className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-primary/80 text-white">
+                        Web search
+                      </TooltipContent>
+                    </Tooltip>
 
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="w-9 h-9 shrink-0 rounded-full"
-                      onClick={handleWebSearchToggle}
-                      disabled={effectiveDisabled}
-                      aria-label="Toggle web search"
-                    >
-                      <Globe2 className="w-4 h-4" />
-                    </Button>
-
-                    <Button
+                    {/* <Button
                       type="button"
                       variant="ghost"
                       size="icon"
@@ -196,7 +217,7 @@ export default function ConversationsPage() {
                       aria-label="Attach image"
                     >
                       <ImagePlus className="w-4 h-4" />
-                    </Button>
+                    </Button> */}
                   </div>
                   <Button
                     type="submit"
