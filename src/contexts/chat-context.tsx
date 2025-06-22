@@ -109,6 +109,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const guestConversation = guestStorage.getConversation(
         currentConversationId
       );
+      console.log({ guestConversation });
       return guestConversation?.messages || [];
     }
 
@@ -201,13 +202,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    if (
-      conversationStatus === "success" &&
-      chat.messages.length !== initialMessages.length
-    ) {
+    const lastInitialMessage = initialMessages[initialMessages.length - 1];
+    const lastChatMessage = chat.messages[chat.messages.length - 1];
+
+    const lastMessageChanged =
+      lastInitialMessage?.id !== lastChatMessage?.id ||
+      lastInitialMessage?.content !== lastChatMessage?.content;
+
+    if (isGuest && lastMessageChanged) {
+      chat.setMessages(initialMessages);
+    } else if (conversationStatus === "success" && lastMessageChanged) {
       chat.setMessages(initialMessages);
     }
-  }, [conversationStatus]);
+  }, [conversationStatus, isGuest, currentConversationId]);
 
   useEffect(() => {
     if (isGuest && initialMessages.length === 0 && currentConversationId) {
@@ -390,10 +397,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const switchToConversation = useCallback(
     (conversationId: string, modelId?: string) => {
-      setCurrentConversationId(conversationId);
       if (modelId) {
         setSelectedModelState(modelId);
       }
+      setCurrentConversationId(conversationId);
       setIsNavigatingToNewChat(false);
     },
     []

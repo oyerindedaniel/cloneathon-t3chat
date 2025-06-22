@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { UseChatHelpers } from "@ai-sdk/react";
+import { useChatControls } from "@/contexts/chat-context";
 
 interface UseAutoScrollOptions {
   /**
@@ -47,6 +48,8 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
     messages = [],
     status = "ready",
   } = options;
+
+  const { currentConversationId } = useChatControls();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageRef = useRef<HTMLDivElement>(null);
@@ -282,7 +285,7 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
 
   useEffect(() => {
     scrollToEnd();
-  }, []);
+  }, [currentConversationId]);
 
   useEffect(() => {
     return () => {
