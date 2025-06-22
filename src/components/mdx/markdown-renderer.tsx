@@ -26,4 +26,15 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       </ReactMarkdown>
     </div>
   );
-});
+},
+areEqual);
+
+function areEqual(
+  prevProps: MarkdownRendererProps,
+  nextProps: MarkdownRendererProps
+): boolean {
+  return (
+    prevProps.content === nextProps.content &&
+    prevProps.className === nextProps.className
+  );
+}

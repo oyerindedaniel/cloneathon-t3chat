@@ -46,8 +46,6 @@ export default function ConversationsPage() {
 
   const effectiveDisabled = isCreatingConversation || isAtLimit;
 
-  console.log({ effectiveDisabled });
-
   const [autosizeRef, resize] = useAutosizeTextArea(130);
 
   const [emptyRef, isEmpty, , , updateIsEmptyState] =

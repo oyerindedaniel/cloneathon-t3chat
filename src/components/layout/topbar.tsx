@@ -15,7 +15,7 @@ import { Share2, Settings, LogOut, User, Key, Menu } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSidebar } from "@/components/ui/sidebar";
 import { ModeToggler } from "@/components/mode-toggler";
-import { useSettingsDialog } from "@/hooks/use-settings-dialog";
+import { useSettings } from "@/contexts/settings-context";
 import { ShortcutBadge } from "@/components/ui/shortcut-badge";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useChatControls, useChatSessionStatus } from "@/contexts/chat-context";
@@ -34,7 +34,7 @@ interface TopbarProps {
 const TopbarComponent = function Topbar({ user }: TopbarProps) {
   const { signOut } = useAuth();
   const { toggleSidebar } = useSidebar();
-  const { openSettings } = useSettingsDialog();
+  const { openSettings } = useSettings();
   const { getShortcutDisplay, shortcuts } = useKeyboardShortcuts();
   const { currentConversationId } = useChatControls();
   const { isGuest } = useChatSessionStatus();

@@ -281,7 +281,7 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   }, [messages, handleNewMessage, isStreaming, isReady]);
 
   useEffect(() => {
-    scrollToEndIfRoomAvailable();
+    scrollToEnd();
   }, []);
 
   useEffect(() => {

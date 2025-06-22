@@ -1,8 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+  useEffect,
+} from "react";
 
-export type SettingsSection = "settings" | "api-keys";
+export type SettingsSection = "settings" | "api-keys" | "shortcuts";
 
-interface UseSettingsDialogReturn {
+interface SettingsContextType {
   isOpen: boolean;
   section: SettingsSection;
   openSettings: (section?: SettingsSection) => void;
@@ -10,9 +17,13 @@ interface UseSettingsDialogReturn {
   setSection: (section: SettingsSection) => void;
 }
 
-export function useSettingsDialog(): UseSettingsDialogReturn {
+const SettingsContext = createContext<SettingsContextType | undefined>(
+  undefined
+);
+
+export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [section, setSection] = useState<SettingsSection>("settings");
+  const [section, setSectionState] = useState<SettingsSection>("settings");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -22,19 +33,20 @@ export function useSettingsDialog(): UseSettingsDialogReturn {
       const settingsParam = urlParams.get("settings");
       const sectionParam = urlParams.get("section") as SettingsSection;
 
-      // console.log("in here sectionn on chaneg");
-
       requestAnimationFrame(() => {
         if (settingsParam === "open") {
           setIsOpen(true);
           if (
             sectionParam &&
-            (sectionParam === "settings" || sectionParam === "api-keys")
+            (sectionParam === "settings" ||
+              sectionParam === "api-keys" ||
+              sectionParam === "shortcuts")
           ) {
-            setSection(sectionParam);
+            setSectionState(sectionParam);
           }
         } else {
           setIsOpen(false);
+          setSectionState("settings");
         }
       });
     };
@@ -66,8 +78,7 @@ export function useSettingsDialog(): UseSettingsDialogReturn {
   const openSettings = useCallback(
     (targetSection: SettingsSection = "settings") => {
       setIsOpen(true);
-      setSection(targetSection);
-
+      setSectionState(targetSection);
       if (typeof window !== "undefined") {
         const url = new URL(window.location.href);
         url.searchParams.set("settings", "open");
@@ -80,7 +91,7 @@ export function useSettingsDialog(): UseSettingsDialogReturn {
 
   const closeSettings = useCallback(() => {
     setIsOpen(false);
-
+    setSectionState("settings");
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.delete("settings");
@@ -89,10 +100,9 @@ export function useSettingsDialog(): UseSettingsDialogReturn {
     }
   }, []);
 
-  const handleSetSection = useCallback(
+  const setSection = useCallback(
     (newSection: SettingsSection) => {
-      setSection(newSection);
-
+      setSectionState(newSection);
       if (typeof window !== "undefined" && isOpen) {
         const url = new URL(window.location.href);
         url.searchParams.set("section", newSection);
@@ -102,11 +112,25 @@ export function useSettingsDialog(): UseSettingsDialogReturn {
     [isOpen]
   );
 
-  return {
-    isOpen,
-    section,
-    openSettings,
-    closeSettings,
-    setSection: handleSetSection,
-  };
-}
+  return (
+    <SettingsContext.Provider
+      value={{
+        isOpen,
+        section,
+        openSettings,
+        closeSettings,
+        setSection,
+      }}
+    >
+      {children}
+    </SettingsContext.Provider>
+  );
+};
+
+export const useSettings = () => {
+  const context = useContext(SettingsContext);
+  if (context === undefined) {
+    throw new Error("useSettings must be used within a SettingsProvider");
+  }
+  return context;
+};

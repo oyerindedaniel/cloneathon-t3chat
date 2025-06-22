@@ -55,7 +55,7 @@ export const createWebSearchTool = (isWebSearchEnabled: boolean) =>
           body: JSON.stringify({
             api_key: process.env.TAVILY_API_KEY,
             query,
-            search_depth: isWebSearchEnabled ? "advanced" : "basic",
+            search_depth: "advanced",
             include_images,
             include_answer: true,
             include_raw_content: true,

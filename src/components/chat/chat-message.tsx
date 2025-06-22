@@ -47,7 +47,7 @@ export const ChatMessage = memo(function ChatMessage({
 
   return (
     <div className="flex w-full justify-start group">
-      <div className="max-w-[85%] space-y-3">
+      <div className="max-w-[85%] w-full space-y-3">
         {message.content && (
           <div className="relative">
             <div className="text-sm leading-relaxed text-foreground-default">

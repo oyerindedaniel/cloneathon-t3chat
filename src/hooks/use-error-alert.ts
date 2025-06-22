@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getErrorDisplayInfo } from "@/lib/utils/openrouter-errors";
-import type { SettingsSection } from "@/hooks/use-settings-dialog";
+import { type SettingsSection } from "@/contexts/settings-context";
 import { UseChatHelpers } from "@ai-sdk/react";
 
 export type ErrorType = "error" | "warning" | "info";
