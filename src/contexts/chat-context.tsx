@@ -201,6 +201,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     },
   });
 
+  useAutoResume({
+    autoResume: isAuthenticated && !!currentConversationId,
+    initialMessages: chat.messages,
+    experimental_resume: chat.experimental_resume,
+    data: chat.data,
+    setMessages: chat.setMessages,
+  });
+
+  const chatMessagesRef = useLatestValue(chat.messages);
+
   useEffect(() => {
     const lastInitialMessage = initialMessages[initialMessages.length - 1];
     const lastChatMessage = chat.messages[chat.messages.length - 1];
@@ -221,16 +231,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       navigate("/conversations");
     }
   }, [currentConversationId]);
-
-  useAutoResume({
-    autoResume: isAuthenticated && !!currentConversationId,
-    initialMessages: chat.messages,
-    experimental_resume: chat.experimental_resume,
-    data: chat.data,
-    setMessages: chat.setMessages,
-  });
-
-  const chatMessagesRef = useLatestValue(chat.messages);
 
   const generateTitle = useCallback(async (): Promise<string | null> => {
     try {
