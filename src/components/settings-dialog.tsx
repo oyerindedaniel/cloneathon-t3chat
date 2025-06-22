@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
@@ -25,9 +25,7 @@ import {
   Trash2,
   AlertCircle,
   Loader2,
-  CheckCircle,
   Keyboard,
-  ConstructionIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
@@ -35,26 +33,13 @@ import { useClipboard } from "@/hooks/use-clipboard";
 import { useToast } from "@/hooks/use-toast";
 import { AVAILABLE_MODELS } from "@/lib/ai/models";
 import { api } from "@/trpc/react";
-import { useRouter } from "next/navigation";
 import { ApiKeyStats } from "@/components/api-key-stats";
 import { ShortcutBadge } from "@/components/ui/shortcut-badge";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useChatConfig } from "@/contexts/chat-context";
+import { useSettings } from "@/contexts/settings-context";
 
-type Section = "settings" | "api-keys" | "shortcuts";
-
-interface SettingsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  defaultSection?: Section;
-}
-
-export function SettingsDialog({
-  open,
-  onOpenChange,
-  defaultSection = "settings",
-}: SettingsDialogProps) {
-  const [activeSection, setActiveSection] = useState<Section>(defaultSection);
+export function SettingsDialog() {
   const [newApiKey, setNewApiKey] = useState("");
   const [hiddenKey, setHiddenKey] = useState(true);
 
@@ -64,6 +49,7 @@ export function SettingsDialog({
   const { shortcuts, getShortcutDisplay } = useKeyboardShortcuts();
 
   const { selectedModel } = useChatConfig();
+  const { isOpen, section, closeSettings, setSection } = useSettings();
 
   const utils = api.useUtils();
 
@@ -109,30 +95,14 @@ export function SettingsDialog({
 
   const currentModelData = AVAILABLE_MODELS.find((m) => m.id === selectedModel);
 
-  console.log({
-    currentModelData,
-    selectedModel,
-  });
-
-  useEffect(() => {
-    if (open && defaultSection) {
-      setActiveSection(defaultSection);
-    }
-  }, [open, defaultSection]);
-
-  const handleSectionChange = (section: Section) => {
-    setActiveSection(section);
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      url.searchParams.set("section", section);
-      window.history.replaceState({}, "", url.toString());
-    }
+  const handleSectionChange = (newSection: typeof section) => {
+    setSection(newSection);
   };
 
   const handleLogout = async () => {
     try {
       await signOut("/login");
-      onOpenChange(false);
+      closeSettings();
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -193,7 +163,7 @@ export function SettingsDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={isOpen} onOpenChange={closeSettings}>
         <DialogContent className="!max-w-3xl w-full h-[500px] p-0 overflow-hidden">
           <DialogHeader className="px-6 py-4 border-b border-subtle sticky top-0 bg-surface-primary z-10">
             <DialogTitle className="text-lg font-semibold">
@@ -204,21 +174,21 @@ export function SettingsDialog({
           <div className="grid grid-cols-[200px_1fr]">
             <div className="border-r border-subtle p-4 overflow-y-auto">
               <nav className="space-y-1">
-                {sections.map((section) => {
-                  const Icon = section.icon;
+                {sections.map((navSection) => {
+                  const Icon = navSection.icon;
                   return (
                     <button
-                      key={section.id}
-                      onClick={() => handleSectionChange(section.id)}
+                      key={navSection.id}
+                      onClick={() => handleSectionChange(navSection.id)}
                       className={cn(
                         "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors text-left",
-                        activeSection === section.id
+                        navSection.id === section
                           ? "bg-surface-secondary text-foreground-default"
                           : "text-foreground-subtle hover:text-foreground-default hover:bg-surface-hover"
                       )}
                     >
                       <Icon className="w-4 h-4" />
-                      {section.label}
+                      {navSection.label}
                     </button>
                   );
                 })}
@@ -227,7 +197,7 @@ export function SettingsDialog({
 
             <div className="overflow-y-auto h-[calc(500px-73px)]">
               <AnimatePresence mode="wait">
-                {activeSection === "settings" && (
+                {section === "settings" && (
                   <motion.div
                     key="settings"
                     initial={{ opacity: 0, x: 20 }}
@@ -308,7 +278,7 @@ export function SettingsDialog({
                   </motion.div>
                 )}
 
-                {activeSection === "api-keys" && (
+                {section === "api-keys" && (
                   <motion.div
                     key="api-keys"
                     initial={{ opacity: 0, x: 20 }}
@@ -325,7 +295,6 @@ export function SettingsDialog({
                       </p>
 
                       <div className="space-y-4">
-                        {/* Current API Key */}
                         {hasApiKey && currentApiKey?.key ? (
                           <div className="p-4 bg-surface-secondary rounded-lg">
                             <div className="flex items-center justify-between mb-3">
@@ -462,7 +431,6 @@ export function SettingsDialog({
 
                         <Separator />
 
-                        {/* Instructions */}
                         <div className="p-4 bg-info/10 border border-info/20 rounded-lg">
                           <h3 className="font-medium text-sm mb-2 text-info">
                             How to get your OpenRouter API Key
@@ -490,7 +458,7 @@ export function SettingsDialog({
                   </motion.div>
                 )}
 
-                {activeSection === "shortcuts" && (
+                {section === "shortcuts" && (
                   <motion.div
                     key="shortcuts"
                     initial={{ opacity: 0, x: 20 }}

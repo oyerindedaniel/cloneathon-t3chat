@@ -4,7 +4,6 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { ConversationsSidebar } from "./conversations-sidebar";
 import { Topbar } from "./topbar";
 import { SettingsDialog } from "@/components/settings-dialog";
-import { useSettingsDialog } from "@/hooks/use-settings-dialog";
 
 interface ConversationsLayoutProps {
   children: React.ReactNode;
@@ -19,8 +18,6 @@ export function ConversationsLayout({
   children,
   user,
 }: ConversationsLayoutProps) {
-  const { isOpen, section, closeSettings } = useSettingsDialog();
-
   return (
     <div className="min-h-screen overflow-x-hidden">
       <SidebarProvider>
@@ -35,11 +32,7 @@ export function ConversationsLayout({
         </SidebarInset>
       </SidebarProvider>
 
-      <SettingsDialog
-        open={isOpen}
-        onOpenChange={closeSettings}
-        defaultSection={section}
-      />
+      <SettingsDialog />
     </div>
   );
 }

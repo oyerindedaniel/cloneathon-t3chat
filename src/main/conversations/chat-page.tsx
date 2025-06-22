@@ -14,7 +14,7 @@ import {
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { useErrorAlert } from "@/hooks/use-error-alert";
 import { ErrorAlert } from "@/components/error-alert";
-import { useSettingsDialog } from "@/hooks/use-settings-dialog";
+import { useSettings } from "@/contexts/settings-context";
 import { ConnectionStatus } from "@/components/ui/connection-status";
 import { useConnectionStatus } from "@/hooks/use-connection-status";
 import { useGuestStorage } from "@/contexts/guest-storage-context";
@@ -22,7 +22,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
-  const { openSettings } = useSettingsDialog();
+  const { openSettings } = useSettings();
 
   const {
     messages,
@@ -132,7 +132,6 @@ export default function ChatPage() {
     }
   }, [isConnected, experimental_resume, startResuming, stopResuming]);
 
-  // Shows loading skeleton while conversation is loading
   if (isConversationLoading && !isNavigatingToNewChat) {
     return (
       <div className="h-full flex flex-col grid-pattern-background px-8">

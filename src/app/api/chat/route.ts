@@ -35,8 +35,6 @@ import { buildExcludedSetClause } from "@/lib/utils/upsert";
 import { createWebSearchTool, getLocationTool } from "@/lib/ai/tools";
 import { v4 as uuidv4 } from "uuid";
 
-export const maxDuration = 60;
-
 interface ReqJson {
   message: UIMessage;
   id: string | null;
@@ -169,11 +167,12 @@ async function saveChat({
           content: message.content,
           sequenceNumber: nextSequence++,
           metadata: messageMetadata,
-          parts: message.experimental_attachments
-            ? JSON.stringify(message.experimental_attachments)
-            : null,
+          parts: message.parts ? JSON.stringify(message.parts) : null,
           annotations: message.annotations
             ? JSON.stringify(message.annotations)
+            : null,
+          attachments: message.experimental_attachments
+            ? JSON.stringify(message.experimental_attachments)
             : null,
         };
 
@@ -384,16 +383,14 @@ export async function POST(req: Request) {
           }),
           messages: coreMessages,
           temperature: 0.7,
-          maxTokens: 1000,
           experimental_transform: smoothStream(),
           experimental_generateMessageId: serverMessageIdGenerator,
           toolChoice: "auto",
-          toolCallStreaming: true,
-          tools: {
-            web_search: createWebSearchTool(isWebSearchEnabled),
-            get_location: getLocationTool,
-          },
-          maxSteps: isWebSearchEnabled ? 5 : 1,
+          // tools: {
+          //   web_search: createWebSearchTool(isWebSearchEnabled),
+          //   get_location: getLocationTool,
+          // },
+          // maxSteps: 5,
           onError({ error }) {
             if (NoSuchToolError.isInstance(error)) {
               console.error("AI SDK Error: No Such Tool", error);
@@ -467,9 +464,15 @@ export async function POST(req: Request) {
         result.mergeIntoDataStream(dataStream, {
           sendReasoning: true,
         });
+
+        console.log(
+          "-----------------[fullStream--------------]:",
+          result.fullStream
+        );
       },
     });
 
+    console.log("did you reach here");
     return new Response(
       await streamContext.resumableStream(streamId, () => stream)
     );

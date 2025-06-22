@@ -209,6 +209,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [conversationStatus]);
 
+  useEffect(() => {
+    if (isGuest && initialMessages.length === 0 && currentConversationId) {
+      navigate("/conversations");
+    }
+  }, [currentConversationId]);
+
   useAutoResume({
     autoResume: isAuthenticated && !!currentConversationId,
     initialMessages: chat.messages,

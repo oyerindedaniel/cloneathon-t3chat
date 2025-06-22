@@ -1,10 +1,10 @@
 import { useCallback } from "react";
 import { api } from "@/trpc/react";
-import { useSettingsDialog } from "./use-settings-dialog";
+import { useSettings } from "@/contexts/settings-context";
 import type { AIModel } from "@/lib/ai/models";
 
 export function usePremiumModelHandler() {
-  const { openSettings } = useSettingsDialog();
+  const { openSettings } = useSettings();
   const {
     data: apiKeyData,
     isLoading: isCheckingApiKey,

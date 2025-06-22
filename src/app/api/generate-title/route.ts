@@ -2,15 +2,13 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText, Message } from "ai";
 import { TITLE_GENERATION_MODEL } from "@/lib/ai/models";
 
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!,
 });
 
 export async function POST(req: Request) {
-  console.log("[GENERATE_TITLE] Starting title generation request");
-
   try {
     const { messages } = (await req.json()) as { messages: Message[] };
 
@@ -22,8 +20,6 @@ export async function POST(req: Request) {
     const conversationText = contextMessages
       .map((msg) => `${msg.role}: ${msg.content}`)
       .join("\n");
-
-    console.log({ conversationText });
 
     const result = await generateText({
       model: openrouter.chat(TITLE_GENERATION_MODEL.id),
