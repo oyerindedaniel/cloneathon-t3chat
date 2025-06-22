@@ -64,7 +64,7 @@ export function ConversationsSidebar() {
 
   const guestStorage = useGuestStorage();
 
-  const { switchToConversation } = useChatControls();
+  const { currentConversationId, switchToConversation } = useChatControls();
 
   const isGuest = !isAuthenticated;
   const allConversations: DisplayConversation[] = useMemo(() => {
@@ -113,6 +113,8 @@ export function ConversationsSidebar() {
       const conversation = filteredDisplayConversations.find(
         (c: DisplayConversation) => c.id === conversationId
       );
+
+      console.log({ conversationId, conversation });
 
       switchToConversation(conversationId, conversation?.model);
       navigate(`/conversations/${conversationId}`);
@@ -164,6 +166,11 @@ export function ConversationsSidebar() {
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useEffect(() => {
+    if (currentConversationId !== currentId) {
+    }
+  }, []);
 
   return (
     <Sidebar className="border-r border-default/50">
