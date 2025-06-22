@@ -208,7 +208,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const chatMessagesRef = useLatestValue(chat.messages);
 
   useEffect(() => {
-    isFirstConversationTitleCreated.current = !!initialMessages;
+    isFirstConversationTitleCreated.current = !!initialMessages.length;
   }, [initialMessages]);
 
   useEffect(() => {
