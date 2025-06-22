@@ -109,7 +109,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const guestConversation = guestStorage.getConversation(
         currentConversationId
       );
-      console.log({ guestConversation });
+
       return guestConversation?.messages || [];
     }
 
