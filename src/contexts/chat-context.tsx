@@ -100,10 +100,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     error: conversationError,
   } = useConversation({ id: currentConversationId, isNavigatingToNewChat });
 
-  useEffect(() => {
-    isFirstConversationTitleCreated.current = !!conversation;
-  }, [conversation]);
-
   const initialMessages = React.useMemo<AIMessage[]>(() => {
     if (isGuest && currentConversationId) {
       const guestConversation = guestStorage.getConversation(
@@ -210,6 +206,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   });
 
   const chatMessagesRef = useLatestValue(chat.messages);
+
+  useEffect(() => {
+    isFirstConversationTitleCreated.current = !!initialMessages.length;
+  }, [initialMessages]);
 
   useEffect(() => {
     const lastInitialMessage = initialMessages[initialMessages.length - 1];

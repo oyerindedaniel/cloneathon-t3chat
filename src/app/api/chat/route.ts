@@ -356,11 +356,11 @@ export async function POST(req: Request) {
     const requestStartTime = performance.now();
 
     if (isAuthenticated && conversationId && session?.user?.id) {
-      const userMessage = allMessages[allMessages.length - 1];
-      if (userMessage && userMessage.role === "user") {
+      const lastMessage = allMessages.at(-1);
+      if (lastMessage && lastMessage.role === "user") {
         await saveChat({
           id: conversationId,
-          messages: [userMessage],
+          messages: [lastMessage],
           modelId,
           userId: session.user.id,
         });
