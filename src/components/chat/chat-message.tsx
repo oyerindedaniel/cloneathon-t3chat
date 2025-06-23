@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Message, UseChatHelpers } from "@ai-sdk/react";
+import { Message as AIMessage, UseChatHelpers } from "@ai-sdk/react";
 import { MarkdownRenderer } from "@/components/mdx";
 import { ReasoningDisplay } from "./reasoning-display";
 import { ChatControls } from "./chat-controls";
@@ -15,7 +15,7 @@ import { motion } from "framer-motion";
 
 interface ChatMessageProps {
   status: UseChatHelpers["status"];
-  message: Message;
+  message: AIMessage;
   currentModel: string;
   onRetry: () => void;
   onModelChange: (modelId: string) => void;

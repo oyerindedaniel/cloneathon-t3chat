@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Trash2, Edit3 } from "lucide-react";
 import { DeleteConversationModal } from "./delete-conversation-modal";
+import { useToast } from "@/hooks/use-toast";
 
 interface ConversationMenuProps {
   conversationId: string;
@@ -39,6 +40,7 @@ export const ConversationMenu = memo(function ConversationMenu({
   onStartEdit,
   onCancelEdit,
 }: ConversationMenuProps) {
+  const { showToast } = useToast();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editTitle, setEditTitle] = useState(conversationTitle);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -55,7 +57,7 @@ export const ConversationMenu = memo(function ConversationMenu({
       await onDelete(conversationId);
       setShowDeleteModal(false);
     } catch (error) {
-      console.error("Failed to delete conversation:", error);
+      showToast("Failed to delete conversation", "error");
     }
   };
 
@@ -64,7 +66,7 @@ export const ConversationMenu = memo(function ConversationMenu({
       try {
         await onRename(conversationId, editTitle.trim());
       } catch (error) {
-        console.error("Failed to rename conversation:", error);
+        showToast("Failed to rename conversation", "error");
         setEditTitle(conversationTitle);
       }
     }

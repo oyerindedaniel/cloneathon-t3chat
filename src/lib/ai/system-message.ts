@@ -186,23 +186,6 @@ export function generateSystemMessage(options: SystemMessageOptions): string {
 
 ${formattingRules}
 
-## Available Tools
-
-### Web Search Tool
-- **Name**: \`web_search\`
-- **Description**: Search the web for current information, news, and answers to questions.
-- **Parameters**:
-  - \`query\` (string, required): The search query to find relevant information. This parameter is MANDATORY.
-  - \`include_images\` (boolean, optional, default: \`true\`): Whether to include images in results.
-  - \`max_results\` (number, optional, default: \`5\`): Maximum number of search results to return.
-
-- **Usage Instructions**:
-  - Always use this tool when the user asks a question that requires current, real-time information that is not within your knowledge cutoff.
-  - When calling \`web_search\`, ALWAYS provide a clear, concise, and specific \`query\` string that accurately reflects what the user is asking.
-  - For example, if the user asks "What is the capital of France?", call \`web_search({\` query: "capital of France" \`})\`
-  - Do NOT call \`web_search\` with an empty or undefined \`query\`
-  - If the user's request is ambiguous and a search query cannot be clearly formulated, ask clarifying questions before attempting to use the tool.
-
 ## Special Instructions
 - If asked about the current time, respond with the current time: ${currentTime}
 - If asked about your model or identity, respond directly: "I am ${

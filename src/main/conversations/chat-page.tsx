@@ -19,6 +19,7 @@ import { ConnectionStatus } from "@/components/ui/connection-status";
 import { useConnectionStatus } from "@/hooks/use-connection-status";
 import { useGuestStorage } from "@/contexts/guest-storage-context";
 import { v4 as uuidv4 } from "uuid";
+import { TypingDots } from "@/components/typing-dots";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
@@ -56,7 +57,7 @@ export default function ChatPage() {
   const { isConnected, isResuming, startResuming, stopResuming } =
     useConnectionStatus();
 
-  const { alertState, hideAlert, handleApiError } = useErrorAlert({
+  const { alertState, hideAlert, handleApiError, resetTimer } = useErrorAlert({
     conversationError: {
       isError: isConversationError,
       error: conversationError,
@@ -64,7 +65,6 @@ export default function ChatPage() {
     streamStatus: status,
     chatError,
     onResume: reload,
-    onOpenSettings: openSettings,
   });
 
   const guestStorage = useGuestStorage();
@@ -184,13 +184,7 @@ export default function ChatPage() {
               </div>
             ))}
 
-            {status === "submitted" && (
-              <div className="flex items-center gap-1 mb-2">
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-75" />
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-150" />
-              </div>
-            )}
+            {status === "submitted" && <TypingDots />}
             <div ref={messagesEndRef} />
 
             {temporarySpaceHeight > 0 && (
@@ -230,7 +224,7 @@ export default function ChatPage() {
         showResume={
           status === "error" && alertState.title === "Streaming Error"
         }
-        resetTimer={alertState.resetTimer}
+        resetTimer={resetTimer}
       />
     </>
   );

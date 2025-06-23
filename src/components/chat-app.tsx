@@ -19,7 +19,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { GuestStorageProvider } from "@/contexts/guest-storage-context";
 import { SettingsProvider } from "@/contexts/settings-context";
-// import SharedConversationPage from "@/main/conversations/shared-conversation-page";
+import SharedConversationPage from "@/main/conversations/shared-conversation-page";
 
 function ConversationsWrapper() {
   const { user } = useAuth();
@@ -58,11 +58,11 @@ export default function ChatApp() {
                   >
                     <Route index element={<ConversationsPage />} />
                     <Route path=":id" element={<ChatPage />} />
+                    <Route
+                      path="share/:shareId"
+                      element={<SharedConversationPage />}
+                    />
                   </Route>
-                  {/* <Route
-                    path="/conversations/share/:shareId"
-                    element={<SharedConversationPage />}
-                  /> */}
                 </Routes>
               </ChatProvider>
             </SettingsProvider>

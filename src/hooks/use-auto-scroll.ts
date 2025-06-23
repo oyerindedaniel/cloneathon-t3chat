@@ -174,8 +174,6 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
       messageElement = messageElement || lastMessageRef.current || undefined;
       if (!messageElement) return;
 
-      console.log(messageElement);
-
       const actualTopbarHeight = calculateOffset().topbar;
 
       const questionElement = messageElement;
@@ -185,9 +183,6 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
       const messageTop = messageElement.offsetTop;
       const viewportHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
-
-      const rect = messageElement.getBoundingClientRect();
-      const scrollY = window.scrollY;
 
       let scrollOffset: number;
       if (questionHeight > maxQuestionHeight) {
@@ -213,7 +208,7 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
 
       let requiredSpace = 0;
       if (targetScrollTop > maxScrollable) {
-        requiredSpace = targetScrollTop - maxScrollable + 100;
+        requiredSpace = targetScrollTop - maxScrollable + 24;
         createTemporarySpace(requiredSpace);
       }
 

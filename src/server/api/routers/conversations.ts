@@ -18,6 +18,12 @@ import {
 import { eq, desc, asc, inArray, ilike, lt, and } from "drizzle-orm";
 import { CONVERSATION_QUERY_LIMIT } from "@/constants/conversations";
 import { v4 as uuidv4 } from "uuid";
+import { createIdGenerator } from "ai";
+
+const serverMessageIdGenerator = createIdGenerator({
+  prefix: "msgs",
+  size: 16,
+});
 
 const createConversationSchema = z.object({
   id: z.string(),
@@ -205,9 +211,7 @@ export const conversationsRouter = createTRPCRouter({
         return existingShare;
       }
 
-      const newShareId = `share_${Math.random()
-        .toString(36)
-        .substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      const newShareId = uuidv4();
 
       const [newConversationShare] = await ctx.db
         .insert(conversationShares)
@@ -268,7 +272,6 @@ export const conversationsRouter = createTRPCRouter({
         )
         .orderBy(asc(messages.sequenceNumber));
 
-      // Create a new conversation for the current user
       const newConversationId = uuidv4();
       const newConversation = await ctx.db
         .insert(conversations)
@@ -283,7 +286,7 @@ export const conversationsRouter = createTRPCRouter({
           totalMessages: messagesToCopy.length,
           lastMessageAt:
             messagesToCopy.length > 0
-              ? messagesToCopy[messagesToCopy.length - 1]?.createdAt
+              ? messagesToCopy.at(-1)?.createdAt
               : new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -302,7 +305,7 @@ export const conversationsRouter = createTRPCRouter({
           ...msg,
           id: uuidv4(),
           conversationId: newConversation[0].id,
-          aiMessageId: uuidv4(),
+          aiMessageId: serverMessageIdGenerator(),
           parentMessageId: null,
           createdAt: new Date(),
         }));

@@ -77,7 +77,6 @@ export function SettingsDialog() {
       setNewApiKey("");
     },
     onError: (error) => {
-      console.error("Failed to set API key:", error);
       showToast("Failed to add API key. Please try again.", "error");
     },
   });
@@ -88,7 +87,6 @@ export function SettingsDialog() {
       showToast("API key removed successfully!", "success");
     },
     onError: (error) => {
-      console.error("Failed to remove API key:", error);
       showToast("Failed to remove API key. Please try again.", "error");
     },
   });
@@ -104,7 +102,7 @@ export function SettingsDialog() {
       await signOut("/login");
       closeSettings();
     } catch (error) {
-      console.error("Logout failed:", error);
+      showToast("Failed to log out. Please try again.", "error");
     }
   };
 
@@ -354,7 +352,12 @@ export function SettingsDialog() {
                                   filter: hiddenKey ? "blur(4px)" : "blur(0px)",
                                 }}
                                 transition={{ duration: 0.2 }}
-                                className="font-mono text-xs bg-surface-primary p-3 rounded border break-all"
+                                className={cn(
+                                  "font-mono text-xs bg-surface-primary p-3 rounded border break-all",
+                                  hiddenKey
+                                    ? "pointer-events-none"
+                                    : "pointer-events-auto"
+                                )}
                               >
                                 {hiddenKey
                                   ? maskKey(currentApiKey.key)

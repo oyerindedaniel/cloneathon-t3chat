@@ -22,7 +22,7 @@ export function useKeyboardShortcuts() {
   const shortcuts: KeyboardShortcut[] = [
     // Chat shortcuts
     {
-      key: "n",
+      key: "o",
       ctrlKey: true,
       description: "New chat",
       category: "chat",

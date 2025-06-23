@@ -420,6 +420,7 @@ export const ModelSelector = memo(function ModelSelector({
                         <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-foreground-muted" />
                         <input
                           type="text"
+                          autoFocus
                           placeholder="Search models..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
