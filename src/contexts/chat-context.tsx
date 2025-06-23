@@ -18,6 +18,7 @@ import { useGuestStorage } from "@/contexts/guest-storage-context";
 import { CONVERSATION_QUERY_LIMIT } from "@/constants/conversations";
 import { tryParseJson } from "@/lib/utils/app";
 import type { BranchStatus } from "@/server/db/schema";
+import { toAIMessage } from "@/lib/utils/message";
 
 type LocationToolCall = ToolCall<"getLocation", { message: string }>;
 
@@ -50,6 +51,7 @@ interface ChatContextType extends UseChatHelpers {
   conversationError: unknown;
   setCurrentConversationId: (conversationId: string) => void;
   isNavigatingToNewChat: boolean;
+  setIsNavigatingToNewChat: (value: boolean) => void;
   isGuest: boolean;
   canSendMessage: boolean;
   remainingMessages: number;
@@ -110,17 +112,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (conversation?.messages) {
-      return conversation.messages.map((msg) => ({
-        id: msg.aiMessageId,
-        role: msg.role as AIMessage["role"],
-        content: msg.content,
-        createdAt: new Date(msg.createdAt),
-        parts: tryParseJson<Message["parts"]>(msg.parts),
-        annotations: tryParseJson<Message["annotations"]>(msg.annotations),
-        experimental_attachments: tryParseJson<
-          Message["experimental_attachments"]
-        >(msg.attachments),
-      }));
+      return conversation.messages.map((msg) => toAIMessage(msg));
     }
 
     return [];
@@ -430,6 +422,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     isCreatingConversation,
     isConversationLoading: conversationLoading,
     isNavigatingToNewChat,
+    setIsNavigatingToNewChat,
     setCurrentConversationId: setCurrentConversationIdCallback,
     isGuest,
     canSendMessage: isGuest ? guestStorage.canAddMessage() : true,
@@ -494,6 +487,10 @@ export function useChatControls() {
     isNavigatingToNewChat: useContextSelector(
       ChatContext,
       (state) => state.isNavigatingToNewChat
+    ),
+    setIsNavigatingToNewChat: useContextSelector(
+      ChatContext,
+      (state) => state.setIsNavigatingToNewChat
     ),
     isCreatingConversation: useContextSelector(
       ChatContext,

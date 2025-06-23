@@ -73,7 +73,7 @@ export const ChatInput = memo(function ChatInput({
   );
 
   return (
-    <div className={cn("max-w-2xl mx-auto space-y-3", className)}>
+    <div className={cn("w-full space-y-3", className)}>
       {isGuest && (
         <MessageLimitWarning
           remainingMessages={remainingMessages}

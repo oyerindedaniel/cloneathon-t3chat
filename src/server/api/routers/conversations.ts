@@ -205,9 +205,7 @@ export const conversationsRouter = createTRPCRouter({
         return existingShare;
       }
 
-      const newShareId = `share_${Math.random()
-        .toString(36)
-        .substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      const newShareId = uuidv4();
 
       const [newConversationShare] = await ctx.db
         .insert(conversationShares)

@@ -36,10 +36,10 @@ export const MessageLimitWarning = memo(function MessageLimitWarning({
       className={cn(
         "flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-md",
         isAtLimit
-          ? "bg-destructive/10 border-destructive/20 text-destructive"
+          ? "bg-error/10 border-error/20 text-white"
           : isNearLimit
-          ? "bg-warning/10 border-warning/20 text-warning-foreground"
-          : "bg-primary/40 border-primary/50 text-muted-foreground",
+          ? "bg-warning/10 border-warning/20 text-white"
+          : "bg-primary/40 border-primary/50 text-white",
         className
       )}
     >

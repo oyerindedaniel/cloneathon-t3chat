@@ -107,7 +107,7 @@ const TopbarComponent = function Topbar({ user }: TopbarProps) {
             variant="outline"
             size="sm"
             onClick={handleShareToggle}
-            disabled={true}
+            disabled={isShareButtonDisabled}
             className="h-8 px-3"
           >
             <Share2 className="w-4 h-4 mr-2" />

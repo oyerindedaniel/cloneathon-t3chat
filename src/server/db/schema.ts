@@ -13,7 +13,6 @@ import {
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { Message as AiMessage } from "ai";
 
 /**
  * Multi-project schema support
@@ -521,7 +520,7 @@ export type NewVerification = typeof verification.$inferInsert;
 export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;
 
-export type Message = typeof messages.$inferSelect & AiMessage;
+export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
 
 export type Attachment = typeof attachments.$inferSelect;

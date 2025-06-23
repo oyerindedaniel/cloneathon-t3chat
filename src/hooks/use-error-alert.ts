@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getErrorDisplayInfo } from "@/lib/utils/openrouter-errors";
-import { type SettingsSection } from "@/contexts/settings-context";
 import { UseChatHelpers } from "@ai-sdk/react";
+import { useSettings } from "@/contexts/settings-context";
+import { TRPCClientError } from "@trpc/client";
+import type { AppRouter } from "@/server/api/root";
 
 export type ErrorType = "error" | "warning" | "info";
 
@@ -26,8 +28,6 @@ interface UseErrorAlertOptions {
   chatError?: Error | string | null;
   // Resume function for stream errors
   onResume?: () => void;
-  // Settings dialog opener for API key errors
-  onOpenSettings?: (section?: SettingsSection) => void;
 }
 
 export function useErrorAlert(options: UseErrorAlertOptions = {}) {
@@ -37,9 +37,9 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
     streamStatus,
     chatError,
     onResume,
-    onOpenSettings,
   } = options;
   const navigate = useNavigate();
+  const { openSettings } = useSettings();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [alertState, setAlertState] = useState<AlertState>({
@@ -64,7 +64,7 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
   }, [autoHideDuration, clearTimeoutRef]);
 
   const showAlert = useCallback(
-    (title: string, message: string, type: ErrorType = "error") => {
+    ({ title, message, type = "error" }: Omit<AlertState, "isOpen">) => {
       setAlertState({
         isOpen: true,
         title,
@@ -91,17 +91,31 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
   // Generic error handlers
   const handleApiError = useCallback(
     (error: Error | string | unknown, context: string = "operation") => {
-      // Try to parse structured error message from server
+      // TRPC Client Error
+      if (error instanceof TRPCClientError) {
+        const TRPCError = error;
+        showAlert({
+          title: context,
+          message: TRPCError.message,
+          type: "error",
+        });
+        return;
+      }
+
+      // Try to parse structured error message from api route server (aisdk)
       if (error instanceof Error && error.message) {
         try {
           const parsedError = JSON.parse(error.message);
           if (parsedError.title && parsedError.message && parsedError.type) {
-            showAlert(parsedError.title, parsedError.message, parsedError.type);
+            showAlert({
+              title: parsedError.title,
+              message: parsedError.message,
+              type: parsedError.type,
+            });
 
-            // Auto-open settings if needed
             if (parsedError.shouldOpenSettings) {
               setTimeout(() => {
-                onOpenSettings?.("api-keys");
+                openSettings("api-keys");
               }, 1000);
             }
             return;
@@ -114,42 +128,54 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
       // Fallback to default error handling
       const errorInfo = getErrorDisplayInfo(error);
 
-      showAlert(errorInfo.title, errorInfo.message, errorInfo.type);
+      showAlert({
+        title: errorInfo.title,
+        message: errorInfo.message,
+        type: errorInfo.type,
+      });
 
-      // Auto-open settings if needed
       if (errorInfo.shouldOpenSettings) {
         setTimeout(() => {
-          onOpenSettings?.("api-keys");
+          openSettings("api-keys");
         }, 1000);
       }
     },
-    [showAlert, onOpenSettings]
+    [showAlert, openSettings]
   );
 
   const handleStreamError = useCallback(() => {
-    showAlert(
-      "Streaming Error",
-      "There was an error with the AI response stream. Please try again.",
-      "error"
-    );
+    showAlert({
+      title: "Streaming Error",
+      message:
+        "There was an error with the AI response stream. Please try again.",
+      type: "error",
+    });
   }, [showAlert]);
 
   const handleConversationLoadError = useCallback(() => {
-    showAlert(
-      "Conversation Error",
-      "Failed to load conversation. Please try again.",
-      "error"
-    );
+    showAlert({
+      title: "Conversation Error",
+      message: "Failed to load conversation. Please try again.",
+      type: "error",
+    });
   }, [showAlert]);
 
   // Handle conversation errors
   useEffect(() => {
     if (conversationError?.isError && conversationError.error) {
-      const error = conversationError.error as Record<string, unknown>;
-      const data = error.data as Record<string, unknown> | undefined;
+      const error = conversationError.error as TRPCClientError<AppRouter>;
+      const data = error.data;
 
       if (data?.code === "NOT_FOUND") {
         navigate("/conversations");
+        setTimeout(() => {
+          showAlert({
+            title: "Conversation Error",
+            message:
+              error.message || "Failed to load conversation. Please try again.",
+            type: "error",
+          });
+        }, 250);
       } else if (data?.code === "UNAUTHORIZED") {
         navigate("/login");
       } else {
@@ -164,11 +190,11 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
   ]);
 
   // Handle stream errors
-  useEffect(() => {
-    if (streamStatus === "error") {
-      handleStreamError();
-    }
-  }, [streamStatus, handleStreamError]);
+  // useEffect(() => {
+  //   if (streamStatus === "error") {
+  //     handleStreamError();
+  //   }
+  // }, [streamStatus, handleStreamError]);
 
   // Handle chat errors
   useEffect(() => {
@@ -184,10 +210,7 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
   }, [clearTimeoutRef]);
 
   return {
-    alertState: {
-      ...alertState,
-      resetTimer,
-    },
+    alertState,
     showAlert,
     hideAlert,
     resetTimer,

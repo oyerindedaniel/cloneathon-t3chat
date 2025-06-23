@@ -354,7 +354,12 @@ export function SettingsDialog() {
                                   filter: hiddenKey ? "blur(4px)" : "blur(0px)",
                                 }}
                                 transition={{ duration: 0.2 }}
-                                className="font-mono text-xs bg-surface-primary p-3 rounded border break-all"
+                                className={cn(
+                                  "font-mono text-xs bg-surface-primary p-3 rounded border break-all",
+                                  hiddenKey
+                                    ? "pointer-events-none"
+                                    : "pointer-events-auto"
+                                )}
                               >
                                 {hiddenKey
                                   ? maskKey(currentApiKey.key)
