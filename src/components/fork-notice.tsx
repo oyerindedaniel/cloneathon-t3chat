@@ -3,18 +3,28 @@ import { Button } from "@/components/ui/button";
 import { GitBranch, X } from "lucide-react";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { TRPCClientError } from "@trpc/client";
-import type { AppRouter } from "@/server/api/root";
+import type { inferRouterOutputs } from "@trpc/server";
+import { AppRouter } from "@/server/api/root";
+import { TRPCClientErrorLike } from "@trpc/client";
+
+type ConversationsRouterOutput = inferRouterOutputs<AppRouter>["conversations"];
+
+type ForkSharedOutput = ConversationsRouterOutput["forkShared"];
 
 interface ForkNoticeProps {
   forkConversationMutation: UseMutationResult<
-    any,
-    TRPCClientError<AppRouter>,
-    void
+    ForkSharedOutput,
+    TRPCClientErrorLike<AppRouter>,
+    { shareId: string },
+    unknown
   >;
+  shareId: string;
 }
 
-export function ForkNotice({ forkConversationMutation }: ForkNoticeProps) {
+export function ForkNotice({
+  forkConversationMutation,
+  shareId,
+}: ForkNoticeProps) {
   const { isAuthenticated } = useAuth();
   const [isDismissed, setIsDismissed] = useState(false);
 
@@ -39,7 +49,7 @@ export function ForkNotice({ forkConversationMutation }: ForkNoticeProps) {
 
       {isAuthenticated && (
         <Button
-          onClick={() => forkConversationMutation.mutate()}
+          onClick={() => forkConversationMutation.mutate({ shareId })}
           disabled={forkConversationMutation.isPending}
           className="mb-6"
         >

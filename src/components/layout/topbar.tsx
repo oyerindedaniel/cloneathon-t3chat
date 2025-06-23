@@ -48,12 +48,12 @@ const TopbarComponent = function Topbar({ user }: TopbarProps) {
       showToast("Share link copied! Enjoy sharing!", "success");
     },
     onError: (error) => {
-      console.error("Failed to create share link:", error);
       showToast("Failed to create share link. Please try again.", "error");
     },
   });
 
-  const isShareButtonDisabled = !currentConversationId || isGuest;
+  const isShareButtonDisabled =
+    !currentConversationId || isGuest || shareConversationMutation.isPending;
 
   const handleShareToggle = useCallback(async () => {
     if (!currentConversationId || isGuest) return;
@@ -111,7 +111,7 @@ const TopbarComponent = function Topbar({ user }: TopbarProps) {
             className="h-8 px-3"
           >
             <Share2 className="w-4 h-4 mr-2" />
-            Share
+            {shareConversationMutation.isPending ? "Sharing" : "Share"}
           </Button>
 
           <DropdownMenu>

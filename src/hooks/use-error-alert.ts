@@ -96,7 +96,7 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
         const TRPCError = error;
         showAlert({
           title: context,
-          message: TRPCError.message,
+          message: TRPCError.message || "An error occurred",
           type: "error",
         });
         return;

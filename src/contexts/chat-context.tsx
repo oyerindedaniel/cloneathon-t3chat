@@ -16,9 +16,9 @@ import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useLatestValue } from "@/hooks/use-latest-value";
 import { useGuestStorage } from "@/contexts/guest-storage-context";
 import { CONVERSATION_QUERY_LIMIT } from "@/constants/conversations";
-import { tryParseJson } from "@/lib/utils/app";
 import type { BranchStatus } from "@/server/db/schema";
 import { toAIMessage } from "@/lib/utils/message";
+import { useToast } from "@/hooks/use-toast";
 
 type LocationToolCall = ToolCall<"getLocation", { message: string }>;
 
@@ -70,6 +70,7 @@ const messageIdGenerator = createIdGenerator({
 });
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
+  const { showToast } = useToast();
   const { isAuthenticated, user } = useAuth();
   const userId = user?.id;
   const navigate = useNavigate();
@@ -286,7 +287,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           });
         }
       } catch (error) {
-        console.error("Failed to update title:", error);
+        showToast("Failed to update title:", "error");
 
         if (!isGuest && previousTitleRef.current) {
           utils.conversations.getById.setData({ id: conversationId }, (old) =>
@@ -442,6 +443,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 export function useChatMessages() {
   return useContextSelector(ChatContext, (state: ChatContextType) => ({
     messages: state.messages,
+    setMessages: state.setMessages,
     append: state.append,
     stop: state.stop,
     reload: state.reload,

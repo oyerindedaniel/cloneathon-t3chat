@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useRef } from "react";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatInput } from "@/components/chat/chat-input";
 import { MessageSkeleton } from "@/components/chat/message-skeleton";
@@ -20,7 +20,6 @@ import { api } from "@/trpc/react";
 import { flushSync } from "react-dom";
 import { toAIMessage } from "@/lib/utils/message";
 import { TypingDots } from "@/components/typing-dots";
-import { TRPCClientError } from "@trpc/client";
 import { ForkNotice } from "@/components/fork-notice";
 
 export default function SharedConversationPage() {
@@ -28,8 +27,9 @@ export default function SharedConversationPage() {
 
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const { setCurrentConversationId, setIsNavigatingToNewChat } =
-    useChatControls();
+  const { setIsNavigatingToNewChat } = useChatControls();
+
+  const userMessage = useRef<string | null>(null);
 
   const {
     conversation,
@@ -42,13 +42,14 @@ export default function SharedConversationPage() {
     isSharedLink: true,
   });
 
-  const { reload, status, error: chatError, addToolResult } = useChatMessages();
-
-  useEffect(() => {
-    if (conversation) {
-      setCurrentConversationId(conversation.id);
-    }
-  }, [conversation, setCurrentConversationId]);
+  const {
+    reload,
+    status,
+    error: chatError,
+    addToolResult,
+    setMessages,
+    append,
+  } = useChatMessages();
 
   const { selectedModel, setSelectedModel } = useChatConfig();
   const { isGuest, remainingMessages, totalMessages, maxMessages } =
@@ -77,9 +78,14 @@ export default function SharedConversationPage() {
         setIsNavigatingToNewChat(true);
         router.push(`/conversations/${newConversation.id}`);
       });
+
+      setMessages([]);
+      append({
+        role: "user",
+        content: userMessage.current ?? "",
+      });
     },
     onError: (forkError) => {
-      console.error("Failed to fork conversation:", forkError);
       handleApiError(forkError, "forking conversation");
     },
   });
@@ -89,34 +95,19 @@ export default function SharedConversationPage() {
       if (!messageContent.trim() || status === "streaming" || !isAuthenticated)
         return;
 
+      userMessage.current = messageContent;
+
       try {
         if (!isAuthenticated) {
           console.error("Cannot fork conversation: User not authenticated.");
           return;
         }
 
-        try {
-          const newConversation = await forkConversationMutation.mutateAsync({
-            shareId,
-          });
-
-          flushSync(() => {
-            setIsNavigatingToNewChat(true);
-            router.push(`/conversations/${newConversation.id}`);
-          });
-        } catch (forkError) {
-          throw forkError;
-        }
-
-        // 2. Navigate to the new conversation page. The message will be appended there.
-        // The `onSuccess` of forkConversationMutation handles the navigation.
+        await forkConversationMutation.mutateAsync({
+          shareId,
+        });
       } catch (error) {
-        handleApiError(
-          error,
-          error instanceof TRPCClientError
-            ? "forking conversation"
-            : "reprompting on shared conversation"
-        );
+        handleApiError(error, "reprompting on shared conversation");
       }
     },
     [status, isAuthenticated, shareId, forkConversationMutation, handleApiError]
@@ -203,7 +194,10 @@ export default function SharedConversationPage() {
         </div>
 
         <div className="max-md:max-w-2xl max-md:w-full md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2">
-          <ForkNotice forkConversationMutation={forkConversationMutation} />
+          <ForkNotice
+            forkConversationMutation={forkConversationMutation}
+            shareId={shareId}
+          />
 
           <ChatInput
             onSubmit={handleRepromptAndFork}
