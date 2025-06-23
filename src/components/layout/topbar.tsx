@@ -85,7 +85,7 @@ const TopbarComponent = function Topbar({ user }: TopbarProps) {
   }, [signOut]);
 
   return (
-    <div className="border-b border-default/30 bg-surface-primary px-6 py-4 fixed top-0 left-0 md:left-[calc(var(--sidebar-width))] h-[var(--topbar-height)] right-0 z-100 group-data-[state=collapsed]:left-0">
+    <div className="border-b border-default/30 bg-surface-primary px-6 py-4 fixed top-0 left-0 md:left-[calc(var(--sidebar-width))] h-[var(--topbar-height)] right-0 z-100 group-data-[state=collapsed]:!left-0 transition-transform">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
@@ -104,7 +104,7 @@ const TopbarComponent = function Topbar({ user }: TopbarProps) {
 
         <div className="flex items-center gap-6">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={handleShareToggle}
             disabled={true}

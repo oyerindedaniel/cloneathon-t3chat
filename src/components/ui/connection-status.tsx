@@ -39,7 +39,7 @@ function ConnectionStatusComponent({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         className={cn(
-          "fixed top-4 right-4 z-50 flex items-center gap-3",
+          "fixed top-[calc(var(--topbar-height)+1.5rem)] right-4 z-50 flex items-center gap-3",
           "px-4 py-3",
           "rounded-lg border shadow-lg backdrop-blur-sm",
           isConnected

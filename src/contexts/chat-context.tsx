@@ -212,6 +212,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [initialMessages]);
 
   useEffect(() => {
+    if (isNavigatingToNewChat) return;
+
     const lastInitialMessage = initialMessages[initialMessages.length - 1];
     const lastChatMessage = chat.messages[chat.messages.length - 1];
 
@@ -224,7 +226,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     } else if (conversationStatus === "success" && lastMessageChanged) {
       chat.setMessages(initialMessages);
     }
-  }, [conversationStatus, isGuest, currentConversationId]);
+  }, [
+    conversationStatus,
+    isGuest,
+    currentConversationId,
+    isNavigatingToNewChat,
+  ]);
 
   useEffect(() => {
     if (isGuest && initialMessages.length === 0 && currentConversationId) {

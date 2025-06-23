@@ -19,8 +19,14 @@ export function useAutosizeTextArea(
       }
 
       if (!value) {
-        el.style.height = `${initialHeight.current}px`;
+        const baseHeight = initialHeight.current;
+        el.style.height = `${baseHeight}px`;
         el.style.overflowY = "hidden";
+
+        document.documentElement.style.setProperty(
+          "--search-height",
+          `${baseHeight}px`
+        );
         return;
       }
 
@@ -28,6 +34,11 @@ export function useAutosizeTextArea(
       const height = Math.min(el.scrollHeight, maxHeight);
       el.style.height = `${height}px`;
       el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+
+      document.documentElement.style.setProperty(
+        "--search-height",
+        `${height}px`
+      );
     });
   }, [maxHeight]);
 
