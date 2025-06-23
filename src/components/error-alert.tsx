@@ -44,7 +44,7 @@ export const ErrorAlert = memo(function ErrorAlert({
     <Alert
       variant={type}
       className={cn(
-        "fixed top-[calc(var(--topbar-height)+1rem)] right-4 z-50 max-w-md shadow-lg animate-in slide-in-from-top-2 fade-in-0",
+        "fixed top-[calc(var(--topbar-height)+1.5rem)] right-4 z-50 max-w-md shadow-lg animate-in slide-in-from-top-2 fade-in-0",
         className
       )}
       onMouseEnter={() => resetTimer?.()}

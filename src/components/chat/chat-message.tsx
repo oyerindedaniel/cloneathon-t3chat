@@ -207,7 +207,7 @@ export const ChatMessage = memo(function ChatMessage({
           }
         })}
 
-        <div className="absolute -bottom-12 left-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="absolute -bottom-8 left-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <ChatControls
             messageContent={message.content}
             currentModel={currentModel}

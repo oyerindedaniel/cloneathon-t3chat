@@ -75,7 +75,7 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
           "--search-height"
         )
       ) * 16 || searchBarHeight;
-    const padding = 16;
+    const padding = 24;
     return { topbar, searchbar, padding };
   }, []);
 
@@ -119,8 +119,8 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   const scrollToAssistantMessageBottom = useCallback(() => {
     const el = lastMessageRef.current;
     if (!el) return;
-    const { searchbar, padding } = calculateOffset();
-    scrollToBottomWithOffset(el, searchbar + padding);
+    const { searchbar, padding, topbar } = calculateOffset();
+    scrollToBottomWithOffset(el, searchbar + topbar + padding);
   }, [lastMessageRef, calculateOffset, scrollToBottomWithOffset]);
 
   const scrollToEndIfRoomAvailable = useCallback(() => {
@@ -146,8 +146,8 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
     const el = lastMessageRef.current;
     if (!el) return;
 
-    const { searchbar, padding } = calculateOffset();
-    const offset = searchbar + padding;
+    const { searchbar, padding, topbar } = calculateOffset();
+    const offset = searchbar + topbar + padding * 2;
 
     const messageBottom = el.offsetTop + el.offsetHeight;
     const viewportBottom = window.scrollY + window.innerHeight - offset;
@@ -189,12 +189,8 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
       const rect = messageElement.getBoundingClientRect();
       const scrollY = window.scrollY;
 
-      const topRelativeToDocument = rect.top + scrollY;
-      console.log({ topRelativeToDocument, messageTop });
-
       let scrollOffset: number;
       if (questionHeight > maxQuestionHeight) {
-        console.log("here");
         // For long questions: leave max lines visible
         scrollOffset =
           questionHeight - maxQuestionHeight + actualTopbarHeight + 16;
@@ -246,12 +242,10 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   const handleNewMessage = useCallback(
     (isNewUserMessage = false) => {
       if (isNewUserMessage) {
-        console.log("valid scrollMessageToTop");
         setTimeout(() => {
           scrollMessageToTop();
         }, 100); // Small delay to ensure DOM is updated
       } else {
-        console.log("valid scrollToEnd");
         setTimeout(() => {
           scrollToAssistantMessageBottom();
         }, 100);
@@ -266,8 +260,6 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
       const lastMessage = messages[messages.length - 1];
       const isNewUserMessage = lastMessage?.role === "user";
       const isNewAssistantMessage = lastMessage?.role === "assistant";
-
-      console.log({ isNewAssistantMessage, isNewUserMessage });
 
       if (isNewAssistantMessage && isStreaming) return;
 
@@ -284,7 +276,9 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   }, [messages, handleNewMessage, isStreaming, isReady]);
 
   useEffect(() => {
-    scrollToEnd();
+    setTimeout(() => {
+      scrollToEnd();
+    }, 100);
   }, [currentConversationId]);
 
   useEffect(() => {
