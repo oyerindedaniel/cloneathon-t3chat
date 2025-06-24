@@ -223,17 +223,17 @@ export function useConversations(searchQuery: string = "") {
 
 export function useConversation({
   id,
-  isNavigatingToNewChat = false,
+  isNewConversation = false,
   isSharedLink = false,
 }: {
   id: string | null;
-  isNavigatingToNewChat?: boolean;
+  isNewConversation?: boolean;
   isSharedLink?: boolean;
 }) {
   const session = useSession();
 
   const enabledForUserConversation =
-    !!id && !!session?.userId && !isNavigatingToNewChat && !isSharedLink;
+    !!id && !!session?.userId && !isNewConversation && !isSharedLink;
 
   const enabledForSharedConversation = !!id && isSharedLink;
 

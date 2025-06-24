@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getErrorDisplayInfo } from "@/lib/utils/openrouter-errors";
-import { UseChatHelpers } from "@ai-sdk/react";
 import { useSettings } from "@/contexts/settings-context";
 import { TRPCClientError } from "@trpc/client";
 import type { AppRouter } from "@/server/api/root";
+import { useChatSessionStatus, useChatMessages } from "@/contexts/chat-context";
 
 export type ErrorType = "error" | "warning" | "info";
 
@@ -22,25 +22,17 @@ interface ConversationError {
 
 interface UseErrorAlertOptions {
   autoHideDuration?: number;
-  // Error sources to monitor
-  conversationError?: ConversationError;
-  streamStatus?: UseChatHelpers["status"];
-  chatError?: Error | string | null;
-  // Resume function for stream errors
-  onResume?: () => void;
 }
 
 export function useErrorAlert(options: UseErrorAlertOptions = {}) {
-  const {
-    autoHideDuration = 5000,
-    conversationError,
-    streamStatus,
-    chatError,
-    onResume,
-  } = options;
+  const { autoHideDuration = 5000 } = options;
+
   const navigate = useNavigate();
   const { openSettings } = useSettings();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const { conversationError, isConversationError } = useChatSessionStatus();
+  const { error: chatError } = useChatMessages();
 
   const [alertState, setAlertState] = useState<AlertState>({
     isOpen: false,
@@ -162,8 +154,8 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
 
   // Handle conversation errors
   useEffect(() => {
-    if (conversationError?.isError && conversationError.error) {
-      const error = conversationError.error as TRPCClientError<AppRouter>;
+    if (isConversationError && conversationError) {
+      const error = conversationError as TRPCClientError<AppRouter>;
       const data = error.data;
 
       if (data?.code === "NOT_FOUND") {
@@ -183,8 +175,8 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
       }
     }
   }, [
-    conversationError?.isError,
-    conversationError?.error,
+    conversationError,
+    isConversationError,
     navigate,
     handleConversationLoadError,
   ]);

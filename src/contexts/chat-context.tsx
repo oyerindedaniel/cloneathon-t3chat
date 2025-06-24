@@ -50,8 +50,8 @@ interface ChatContextType extends UseChatHelpers {
   isConversationError: boolean;
   conversationError: unknown;
   setCurrentConversationId: (conversationId: string) => void;
-  isNavigatingToNewChat: boolean;
-  setIsNavigatingToNewChat: (value: boolean) => void;
+  isNewConversation: boolean;
+  setIsNewConversation: (value: boolean) => void;
   isGuest: boolean;
   canSendMessage: boolean;
   remainingMessages: number;
@@ -82,7 +82,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const previousTitleRef = useRef<string | null>(null);
   const [selectedModel, setSelectedModelState] = useState(DEFAULT_MODEL.id);
   const selectedModelRef = useLatestValue(selectedModel);
-  const [isNavigatingToNewChat, setIsNavigatingToNewChat] = useState(false);
+  const [isNewConversation, setIsNewConversation] = useState(false);
   const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
   const isWebSearchEnabledRef = useLatestValue(isWebSearchEnabled);
 
@@ -101,7 +101,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     isLoading: conversationLoading,
     isError: isConversationError,
     error: conversationError,
-  } = useConversation({ id: currentConversationId, isNavigatingToNewChat });
+  } = useConversation({ id: currentConversationId, isNewConversation });
 
   const initialMessages = React.useMemo<AIMessage[]>(() => {
     if (isGuest && currentConversationId) {
@@ -201,11 +201,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const chatMessagesRef = useLatestValue(chat.messages);
 
   useEffect(() => {
+    if (isNewConversation) return;
+
     isFirstConversationTitleCreated.current = !!initialMessages.length;
-  }, [initialMessages]);
+  }, [initialMessages.length, isNewConversation]);
 
   useEffect(() => {
-    if (isNavigatingToNewChat) return;
+    if (isNewConversation) return;
 
     const lastInitialMessage = initialMessages[initialMessages.length - 1];
     const lastChatMessage = chat.messages[chat.messages.length - 1];
@@ -219,18 +221,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     } else if (conversationStatus === "success" && lastMessageChanged) {
       chat.setMessages(initialMessages);
     }
-  }, [
-    conversationStatus,
-    isGuest,
-    currentConversationId,
-    isNavigatingToNewChat,
-  ]);
+  }, [conversationStatus, isGuest, currentConversationId, isNewConversation]);
 
   useEffect(() => {
     if (isGuest && initialMessages.length === 0 && currentConversationId) {
       navigate("/conversations");
     }
-  }, [currentConversationId]);
+  }, [currentConversationId, isGuest, initialMessages.length]);
 
   const generateTitle = useCallback(async (): Promise<string | null> => {
     try {
@@ -315,7 +312,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       try {
         flushSync(() => {
-          setIsNavigatingToNewChat(true);
+          setIsNewConversation(true);
           navigate(`/conversations/${conversationId}`, { replace: true });
         });
 
@@ -401,7 +398,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setSelectedModelState(modelId);
       }
       setCurrentConversationId(conversationId);
-      setIsNavigatingToNewChat(false);
+      setIsNewConversation(false);
     },
     []
   );
@@ -422,8 +419,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     switchToConversation,
     isCreatingConversation,
     isConversationLoading: conversationLoading,
-    isNavigatingToNewChat,
-    setIsNavigatingToNewChat,
+    isNewConversation,
+    setIsNewConversation,
     setCurrentConversationId: setCurrentConversationIdCallback,
     isGuest,
     canSendMessage: isGuest ? guestStorage.canAddMessage() : true,
@@ -486,13 +483,13 @@ export function useChatControls() {
       ChatContext,
       (state) => state.setCurrentConversationId
     ),
-    isNavigatingToNewChat: useContextSelector(
+    isNewConversation: useContextSelector(
       ChatContext,
-      (state) => state.isNavigatingToNewChat
+      (state) => state.isNewConversation
     ),
-    setIsNavigatingToNewChat: useContextSelector(
+    setIsNewConversation: useContextSelector(
       ChatContext,
-      (state) => state.setIsNavigatingToNewChat
+      (state) => state.setIsNewConversation
     ),
     isCreatingConversation: useContextSelector(
       ChatContext,

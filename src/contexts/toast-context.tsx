@@ -7,7 +7,11 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import type { ToastState, UseToastReturn } from "@/hooks/use-toast";
+import type {
+  ToastState,
+  UseToastReturn,
+  ToastStateType,
+} from "@/hooks/use-toast";
 
 type ToastContextType = UseToastReturn;
 
@@ -39,11 +43,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 
   const showToast = useCallback(
-    (
-      message: string,
-      type: "success" | "error" | "info" = "info",
-      duration = 3000
-    ) => {
+    (message: string, type: ToastStateType = "info", duration = 5000) => {
       setToast({ isVisible: true, message, type });
       startTimeout(duration);
     },

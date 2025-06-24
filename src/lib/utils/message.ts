@@ -15,3 +15,7 @@ export function toAIMessage(msg: DBMessage): AIMessage {
     >(msg.attachments),
   };
 }
+
+export function toAIMessages(messages: DBMessage[]): AIMessage[] {
+  return messages.map(toAIMessage);
+}
