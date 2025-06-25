@@ -70,10 +70,6 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const [temporarySpaceHeight, setTemporarySpaceHeight] = useState(0);
   const prevMessagesLength = useRef(messages.length);
-  const spaceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const isStreaming = status === "streaming";
-  const isReady = status === "ready";
 
   const behavior = smooth ? "smooth" : "instant";
 
@@ -184,7 +180,6 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   // Create temporary space to allow scrolling
   const createTemporarySpace = useCallback((requiredSpace: number) => {
     setTemporarySpaceHeight(requiredSpace);
-    // Don't auto-remove the space - it will be recalculated on next message
   }, []);
 
   const scrollMessageToTop = useCallback(
@@ -192,7 +187,7 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
       messageElement = messageElement || lastMessageRef.current || undefined;
       if (!messageElement) return;
 
-      const actualTopbarHeight = calculateOffset().topbar;
+      const { topbar, padding } = calculateOffset();
 
       const questionElement = messageElement;
       const questionHeight = questionElement.offsetHeight;
@@ -201,32 +196,28 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
       const messageOffsetTop = getOffsetTopFromPage(messageElement);
       const viewportHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
-      const scrollOffsetY = window.scrollY;
 
-      let scrollOffset: number;
+      let targetScrollTop;
+
       if (questionHeight > maxQuestionHeight) {
-        // For long questions: leave max lines visible
-        scrollOffset =
-          questionHeight - maxQuestionHeight + actualTopbarHeight + 16;
+        // For long questions: scroll to show only the last part
+        targetScrollTop =
+          messageOffsetTop +
+          questionHeight -
+          maxQuestionHeight -
+          topbar -
+          padding;
       } else {
-        // For short questions: scroll near top
-        scrollOffset = actualTopbarHeight + 16;
+        // For short questions: scroll to show the top just below the topbar
+        targetScrollTop = messageOffsetTop - topbar - padding;
       }
 
-      const targetScrollTop = messageOffsetTop - scrollOffset;
       const maxScrollable = documentHeight - viewportHeight;
-
-      console.log({
-        actualTopbarHeight,
-        messageOffsetTop,
-        targetScrollTop,
-        maxScrollable,
-        scrollOffset,
-      });
 
       let requiredSpace = 0;
       if (targetScrollTop > maxScrollable) {
         requiredSpace = targetScrollTop - maxScrollable;
+
         createTemporarySpace(requiredSpace);
       }
 
@@ -274,37 +265,23 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
       const isNewUserMessage = lastMessage?.role === "user";
       const isNewAssistantMessage = lastMessage?.role === "assistant";
 
-      if (isNewAssistantMessage && isStreaming) return;
-
-      if (isNewAssistantMessage && status === "ready") {
-        return handleNewMessage();
+      if (isNewUserMessage) {
+        handleNewMessage(isNewUserMessage);
+      } else if (isNewAssistantMessage && status === "ready") {
+        handleNewMessage();
       }
-
-      console.log(status);
-
-      // if (isNewUserMessage && status === "submitted") {
-      handleNewMessage(isNewUserMessage);
-      // }
 
       prevMessagesLength.current = messages.length;
     }
-  }, [messages, handleNewMessage, isStreaming, isReady]);
+  }, [messages, handleNewMessage, status]);
 
   useEffect(() => {
-    console.log({ temporarySpaceHeight });
+    prevMessagesLength.current = 0;
     setTemporarySpaceHeight(0);
     setTimeout(() => {
       scrollToEnd();
     }, 100);
   }, [currentConversationId]);
-
-  useEffect(() => {
-    return () => {
-      if (spaceTimeoutRef.current) {
-        clearTimeout(spaceTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return {
     messagesEndRef,

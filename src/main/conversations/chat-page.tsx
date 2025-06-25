@@ -19,6 +19,7 @@ import { useConnectionStatus } from "@/hooks/use-connection-status";
 import { useGuestStorage } from "@/contexts/guest-storage-context";
 import { v4 as uuidv4 } from "uuid";
 import { TypingDots } from "@/components/typing-dots";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
@@ -144,7 +145,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div key={id} className="flex flex-col grid-pattern-background h-full px-8">
+    <div className="flex flex-col grid-pattern-background h-full px-8">
       <ConnectionStatus
         isConnected={isConnected}
         isResuming={isResuming}
@@ -169,8 +170,18 @@ export default function ChatPage() {
               />
             </div>
           ))}
-
-          {status === "submitted" && <TypingDots />}
+          <AnimatePresence>
+            {status === "submitted" && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <TypingDots />
+              </motion.div>
+            )}
+          </AnimatePresence>
           <div ref={messagesEndRef} />
 
           {temporarySpaceHeight > 0 && (

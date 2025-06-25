@@ -1,6 +1,10 @@
 "use client";
 
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import {
+  SidebarProvider,
+  SidebarInset,
+  Sidebar,
+} from "@/components/ui/sidebar";
 import { ConversationsSidebar } from "./conversations-sidebar";
 import { Topbar } from "./topbar";
 import { SettingsDialog } from "@/components/settings-dialog";
@@ -22,16 +26,15 @@ export function ConversationsLayout({
     <div className="min-h-screen overflow-x-hidden">
       <SidebarProvider>
         <ConversationsSidebar />
-        <SidebarInset className="relative">
-          <div className="flex flex-col h-full relative z-10">
+        <SidebarInset>
+          <div className="flex flex-col h-full z-10">
             <Topbar user={user} />
-            <main className="flex-1 overflow-hidden !overflow-x-auto pt-[calc(var(--topbar-height))] md:w-[calc(100vw-var(--sidebar-width))] h-full">
+            <main className="flex-1 overflow-hidden overflow-x-auto pt-[calc(var(--topbar-height))] md:w-[calc(100vw-var(--sidebar-width))] h-full">
               {children}
             </main>
           </div>
         </SidebarInset>
       </SidebarProvider>
-
       <SettingsDialog />
     </div>
   );
