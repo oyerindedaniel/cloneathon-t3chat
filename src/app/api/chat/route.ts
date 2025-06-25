@@ -52,6 +52,8 @@ const serverMessageIdGenerator = createIdGenerator({
   size: 16,
 });
 
+export const maxDuration = 60;
+
 async function getApiKey(): Promise<string> {
   const cookieStore = await cookies();
   const userApiKey = cookieStore.get("apikey_openrouter");
@@ -431,30 +433,34 @@ export async function POST(req: Request) {
             }
           },
           onFinish: async ({ response, usage }) => {
-            if (isAuthenticated && conversationId && session?.user?.id) {
-              const responseTime = performance.now() - requestStartTime;
+            try {
+              if (isAuthenticated && conversationId && session?.user?.id) {
+                const responseTime = performance.now() - requestStartTime;
 
-              const updatedMessages = appendResponseMessages({
-                messages: allMessages,
-                responseMessages: response.messages,
-              });
-
-              const assistantMessages = updatedMessages.filter(
-                (msg) =>
-                  msg.role === "assistant" &&
-                  !allMessages.some((existing) => existing.id === msg.id)
-              );
-
-              if (assistantMessages.length > 0) {
-                await saveChat({
-                  id: conversationId,
-                  messages: assistantMessages,
-                  modelId,
-                  userId: session.user.id,
-                  responseTime,
-                  usage,
+                const updatedMessages = appendResponseMessages({
+                  messages: allMessages,
+                  responseMessages: response.messages,
                 });
+
+                const assistantMessages = updatedMessages.filter(
+                  (msg) =>
+                    msg.role === "assistant" &&
+                    !allMessages.some((existing) => existing.id === msg.id)
+                );
+
+                if (assistantMessages.length > 0) {
+                  await saveChat({
+                    id: conversationId,
+                    messages: assistantMessages,
+                    modelId,
+                    userId: session.user.id,
+                    responseTime,
+                    usage,
+                  });
+                }
               }
+            } catch (error) {
+              console.error("Error in onFinish callback:", error);
             }
           },
         });

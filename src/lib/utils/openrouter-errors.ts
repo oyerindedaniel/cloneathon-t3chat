@@ -147,6 +147,8 @@ export function getErrorDisplayInfo(error: unknown): {
 } {
   const parsed = parseOpenRouterError(error);
 
+  console.log("parsed error-----------", parsed);
+
   if (parsed.type === "openrouter" && parsed.code) {
     switch (parsed.code) {
       case 400:

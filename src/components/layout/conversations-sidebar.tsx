@@ -114,8 +114,6 @@ export function ConversationsSidebar() {
         (c: DisplayConversation) => c.id === conversationId
       );
 
-      console.log({ conversationId, conversation });
-
       switchToConversation(conversationId, conversation?.model);
       navigate(`/conversations/${conversationId}`);
     },
@@ -168,7 +166,7 @@ export function ConversationsSidebar() {
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
-    <Sidebar className="border-r border-default/50">
+    <Sidebar variant="inset" className="border-r border-default/50">
       <SidebarHeader className="p-4">
         <ConversationSearch
           searchQuery={searchQuery}

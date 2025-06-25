@@ -120,7 +120,7 @@ export default function ConversationsPage() {
   }, [toggleWebSearch]);
 
   return (
-    <div className="h-full flex flex-col grid-pattern-background">
+    <div className="h-full flex flex-col grid-pattern-background not-only-of-type:w-full">
       <div className="flex-grow p-4 overflow-hidden relative">
         <GridCross
           style={{

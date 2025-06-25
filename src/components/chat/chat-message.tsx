@@ -48,11 +48,11 @@ export const ChatMessage = memo(function ChatMessage({
   return (
     <div className="flex w-full justify-start group relative">
       <div className="max-w-[85%] w-full space-y-3">
-        {message.content && (
+        {/* {message.content && (
           <div className="text-sm leading-relaxed text-foreground-default">
             <MarkdownRenderer content={message.content} className="" />
           </div>
-        )}
+        )} */}
 
         {message.parts?.map((part, index) => {
           switch (part.type) {
@@ -76,6 +76,13 @@ export const ChatMessage = memo(function ChatMessage({
                   reasoningPart={reasoningPart}
                   isStreaming={status === "streaming"}
                 />
+              );
+            case "text":
+              const textPart = part;
+              return (
+                <div className="text-sm leading-relaxed text-foreground-default">
+                  <MarkdownRenderer content={textPart.text} />
+                </div>
               );
             case "tool-invocation":
               const toolInvocationPart = part;

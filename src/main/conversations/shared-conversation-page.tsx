@@ -18,7 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useConversation } from "@/hooks/use-conversations";
 import { api } from "@/trpc/react";
 import { flushSync } from "react-dom";
-import { toAIMessage } from "@/lib/utils/message";
+import { toAIMessage, toAIMessages } from "@/lib/utils/message";
 import { TypingDots } from "@/components/typing-dots";
 import { ForkNotice } from "@/components/fork-notice";
 
@@ -27,7 +27,7 @@ export default function SharedConversationPage() {
 
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const { setIsNavigatingToNewChat } = useChatControls();
+  const { isNewConversation, setIsNewConversation } = useChatControls();
 
   const userMessage = useRef<string | null>(null);
 
@@ -36,20 +36,15 @@ export default function SharedConversationPage() {
     isLoading: isConversationLoading,
     isError: isConversationError,
     error: conversationError,
+    status: conversationStatus,
   } = useConversation({
     id: shareId,
-    isNavigatingToNewChat: false,
+    isNewConversation,
     isSharedLink: true,
   });
 
-  const {
-    reload,
-    status,
-    error: chatError,
-    addToolResult,
-    setMessages,
-    append,
-  } = useChatMessages();
+  const { reload, status, addToolResult, setMessages, append } =
+    useChatMessages();
 
   const { selectedModel, setSelectedModel } = useChatConfig();
   const { isGuest, remainingMessages, totalMessages, maxMessages } =
@@ -62,28 +57,24 @@ export default function SharedConversationPage() {
       status,
     });
 
-  const { alertState, hideAlert, handleApiError, resetTimer } = useErrorAlert({
-    conversationError: {
-      isError: isConversationError,
-      error: conversationError,
-    },
-    streamStatus: status,
-    chatError,
-    onResume: reload,
-  });
+  const { alertState, hideAlert, handleApiError, resetTimer } = useErrorAlert();
 
   const forkConversationMutation = api.conversations.forkShared.useMutation({
     onSuccess: (newConversation) => {
       flushSync(() => {
-        setIsNavigatingToNewChat(true);
+        setIsNewConversation(true);
+        if (conversationStatus === "success") {
+          setMessages(toAIMessages(conversation?.messages ?? []));
+        }
         router.push(`/conversations/${newConversation.id}`);
       });
 
-      setMessages([]);
-      append({
-        role: "user",
-        content: userMessage.current ?? "",
-      });
+      if (!!userMessage.current) {
+        append({
+          role: "user",
+          content: userMessage.current,
+        });
+      }
     },
     onError: (forkError) => {
       handleApiError(forkError, "forking conversation");
@@ -97,18 +88,14 @@ export default function SharedConversationPage() {
 
       userMessage.current = messageContent;
 
-      try {
-        if (!isAuthenticated) {
-          console.error("Cannot fork conversation: User not authenticated.");
-          return;
-        }
-
-        await forkConversationMutation.mutateAsync({
-          shareId,
-        });
-      } catch (error) {
-        handleApiError(error, "reprompting on shared conversation");
+      if (!isAuthenticated) {
+        console.error("Cannot fork conversation: User not authenticated.");
+        return;
       }
+
+      await forkConversationMutation.mutateAsync({
+        shareId,
+      });
     },
     [status, isAuthenticated, shareId, forkConversationMutation, handleApiError]
   );
@@ -139,7 +126,7 @@ export default function SharedConversationPage() {
 
   if (isConversationError) {
     return (
-      <div className="h-full flex flex-col grid-pattern-background px-8 justify-center items-center">
+      <div className="h-full flex flex-col grid-pattern-background px-8">
         <ErrorAlert
           isOpen={true}
           onClose={() => router.push("/conversations")}

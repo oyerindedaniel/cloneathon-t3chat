@@ -58,6 +58,7 @@ export const ChatInput = memo(function ChatInput({
       if (effectiveDisabled) return;
 
       handleSubmit(onSubmit);
+      resize();
     },
     [effectiveDisabled, handleSubmit, onSubmit]
   );
@@ -67,6 +68,7 @@ export const ChatInput = memo(function ChatInput({
       if (e.key === "Enter" && !e.shiftKey && !effectiveDisabled) {
         e.preventDefault();
         handleSubmit(onSubmit);
+        resize();
       }
     },
     [effectiveDisabled, handleSubmit, onSubmit]

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Copy, ChevronDown, ChevronUp, Brain } from "lucide-react";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { ReasoningUIPart } from "@ai-sdk/ui-utils";
+import { MarkdownRenderer } from "../mdx";
 
 interface ReasoningDisplayProps {
   reasoningPart?: ReasoningUIPart;
@@ -177,9 +178,10 @@ export function ReasoningDisplay({
                     />
                   )}
 
-                  <pre className="whitespace-pre-wrap font-mono text-xs text-foreground-subtle">
+                  <MarkdownRenderer content={displayText || reasoning || ""} />
+                  {/* <pre className="whitespace-pre-wrap font-mono text-xs text-foreground-subtle">
                     {displayText || reasoning}
-                  </pre>
+                  </pre> */}
                 </div>
 
                 {!isExpanded && reasoning && reasoning.length > 200 && (

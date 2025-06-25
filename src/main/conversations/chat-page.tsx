@@ -14,16 +14,18 @@ import {
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { useErrorAlert } from "@/hooks/use-error-alert";
 import { ErrorAlert } from "@/components/error-alert";
-import { useSettings } from "@/contexts/settings-context";
 import { ConnectionStatus } from "@/components/ui/connection-status";
 import { useConnectionStatus } from "@/hooks/use-connection-status";
 import { useGuestStorage } from "@/contexts/guest-storage-context";
 import { v4 as uuidv4 } from "uuid";
 import { TypingDots } from "@/components/typing-dots";
+import { AnimatePresence, motion } from "framer-motion";
+import { useSidebar } from "@/components/ui/sidebar";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
-  const { openSettings } = useSettings();
+  const { open } = useSidebar();
+  const state = open ? "expanded" : "collapsed";
 
   const {
     messages,
@@ -31,16 +33,13 @@ export default function ChatPage() {
     stop,
     reload,
     status,
-    error: chatError,
     experimental_resume,
     addToolResult,
   } = useChatMessages();
   const { selectedModel, setSelectedModel } = useChatConfig();
-  const { isNavigatingToNewChat, setCurrentConversationId } = useChatControls();
+  const { isNewConversation, setCurrentConversationId } = useChatControls();
   const {
     isConversationLoading,
-    conversationError,
-    isConversationError,
     isGuest,
     remainingMessages,
     totalMessages,
@@ -57,23 +56,15 @@ export default function ChatPage() {
   const { isConnected, isResuming, startResuming, stopResuming } =
     useConnectionStatus();
 
-  const { alertState, hideAlert, handleApiError, resetTimer } = useErrorAlert({
-    conversationError: {
-      isError: isConversationError,
-      error: conversationError,
-    },
-    streamStatus: status,
-    chatError,
-    onResume: reload,
-  });
+  const { alertState, hideAlert, handleApiError, resetTimer } = useErrorAlert();
 
   const guestStorage = useGuestStorage();
 
   useEffect(() => {
-    if (id && !isNavigatingToNewChat) {
+    if (id && !isNewConversation) {
       setCurrentConversationId(id);
     }
-  }, [id, setCurrentConversationId, isNavigatingToNewChat]);
+  }, [id, setCurrentConversationId, isNewConversation]);
 
   const handleMessageSubmit = useCallback(
     (message: string) => {
@@ -132,7 +123,7 @@ export default function ChatPage() {
     }
   }, [isConnected, experimental_resume, startResuming, stopResuming]);
 
-  if (isConversationLoading && !isNavigatingToNewChat) {
+  if (isConversationLoading && !isNewConversation) {
     return (
       <div className="h-full flex flex-col grid-pattern-background px-8">
         <div className="flex-1 py-4 max-w-2xl mx-auto w-full">
@@ -157,61 +148,72 @@ export default function ChatPage() {
   }
 
   return (
-    <>
-      <div className="flex flex-col grid-pattern-background h-full px-8">
-        <ConnectionStatus
-          isConnected={isConnected}
-          isResuming={isResuming}
-          onRetry={handleRetryConnection}
-        />
+    <div className="flex flex-col grid-pattern-background h-full px-8">
+      <ConnectionStatus
+        isConnected={isConnected}
+        isResuming={isResuming}
+        onRetry={handleRetryConnection}
+      />
 
-        <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+3rem)]">
-          <div className="flex flex-col gap-12">
-            {messages.map((message, index) => (
-              <div
-                key={message.id}
-                ref={index === messages.length - 1 ? lastMessageRef : undefined}
-                data-role={message.role}
-              >
-                <ChatMessage
-                  status={status}
-                  message={message}
-                  currentModel={selectedModel}
-                  onRetry={handleReload}
-                  onModelChange={setSelectedModel}
-                  addToolResult={addToolResult}
-                />
-              </div>
-            ))}
-
-            {status === "submitted" && <TypingDots />}
-            <div ref={messagesEndRef} />
-
-            {temporarySpaceHeight > 0 && (
-              <div
-                style={{ height: `${temporarySpaceHeight}px` }}
-                className="pointer-events-none"
-                aria-hidden="true"
+      <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+4rem)]">
+        <div className="flex flex-col gap-12">
+          {messages.map((message, index) => (
+            <div
+              key={message.id}
+              ref={index === messages.length - 1 ? lastMessageRef : undefined}
+              data-role={message.role}
+            >
+              <ChatMessage
+                status={status}
+                message={message}
+                currentModel={selectedModel}
+                onRetry={handleReload}
+                onModelChange={setSelectedModel}
+                addToolResult={addToolResult}
               />
+            </div>
+          ))}
+          <AnimatePresence>
+            {status === "submitted" && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <TypingDots />
+              </motion.div>
             )}
-          </div>
-        </div>
+          </AnimatePresence>
+          <div ref={messagesEndRef} />
 
-        <div className="max-md:max-w-2xl max-md:w-full md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2">
-          <ChatInput
-            onSubmit={handleMessageSubmit}
-            onImageAttach={handleImageAttach}
-            selectedModel={selectedModel}
-            onModelChange={setSelectedModel}
-            disabled={status === "streaming" || status === "submitted"}
-            className="flex-1"
-            onStop={handleStop}
-            isGuest={isGuest}
-            remainingMessages={remainingMessages}
-            totalMessages={totalMessages}
-            maxMessages={maxMessages}
-          />
+          {temporarySpaceHeight > 0 && (
+            <div
+              style={{ height: `${temporarySpaceHeight}px` }}
+              className="pointer-events-none"
+              aria-hidden="true"
+            />
+          )}
         </div>
+      </div>
+
+      <div
+        data-state={state}
+        className="max-md:max-w-2xl max-md:w-full data-[state=collapsed]:!max-w-2xl data-[state=collapsed]:!w-full data-[state=collapsed]:!left-2/4 md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2"
+      >
+        <ChatInput
+          onSubmit={handleMessageSubmit}
+          onImageAttach={handleImageAttach}
+          selectedModel={selectedModel}
+          onModelChange={setSelectedModel}
+          disabled={status === "streaming" || status === "submitted"}
+          className="flex-1"
+          onStop={handleStop}
+          isGuest={isGuest}
+          remainingMessages={remainingMessages}
+          totalMessages={totalMessages}
+          maxMessages={maxMessages}
+        />
       </div>
 
       <ErrorAlert
@@ -226,6 +228,6 @@ export default function ChatPage() {
         }
         resetTimer={resetTimer}
       />
-    </>
+    </div>
   );
 }

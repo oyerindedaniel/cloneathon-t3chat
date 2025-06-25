@@ -38,6 +38,21 @@ interface UseAutoScrollOptions {
   status: UseChatHelpers["status"];
 }
 
+/**
+ * Gets the total offset of an element from the top of the document.
+ */
+function getOffsetTopFromPage(el: HTMLElement): number {
+  let totalOffset = 0;
+  let current: HTMLElement | null = el;
+
+  while (current) {
+    totalOffset += current.offsetTop;
+    current = current.offsetParent as HTMLElement;
+  }
+
+  return totalOffset;
+}
+
 export function useAutoScroll(options: UseAutoScrollOptions) {
   const {
     searchBarHeight = 96,
@@ -55,10 +70,6 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const [temporarySpaceHeight, setTemporarySpaceHeight] = useState(0);
   const prevMessagesLength = useRef(messages.length);
-  const spaceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const isStreaming = status === "streaming";
-  const isReady = status === "ready";
 
   const behavior = smooth ? "smooth" : "instant";
 
@@ -84,7 +95,7 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
    * Used to align message with topbar visibility.
    */
   const scrollToTopWithOffset = useCallback((el: HTMLElement, offset = 0) => {
-    const top = el.offsetTop - offset;
+    const top = getOffsetTopFromPage(el) - offset;
     window.scrollTo({ top, behavior: "smooth" });
   }, []);
 
@@ -95,7 +106,10 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   const scrollToBottomWithOffset = useCallback(
     (el: HTMLElement, offset = 0) => {
       const bottom =
-        el.offsetTop + el.offsetHeight - window.innerHeight + offset;
+        getOffsetTopFromPage(el) +
+        el.offsetHeight -
+        window.innerHeight +
+        offset;
       window.scrollTo({ top: bottom, behavior: "smooth" });
     },
     []
@@ -130,7 +144,7 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
     const { topbar, searchbar, padding } = calculateOffset();
     const availableHeight =
       window.innerHeight - topbar - searchbar - padding * 2;
-    const heightFromLast = lastEl.offsetTop + lastEl.offsetHeight;
+    const heightFromLast = getOffsetTopFromPage(lastEl) + lastEl.offsetHeight;
 
     if (heightFromLast <= window.scrollY + availableHeight) {
       messagesEndRef.current?.scrollIntoView({ behavior });
@@ -149,7 +163,7 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
     const { searchbar, padding, topbar } = calculateOffset();
     const offset = searchbar + topbar + padding * 2;
 
-    const messageBottom = el.offsetTop + el.offsetHeight;
+    const messageBottom = getOffsetTopFromPage(el) + el.offsetHeight;
     const viewportBottom = window.scrollY + window.innerHeight - offset;
 
     // Only scroll if the bottom of the message is below the visible area
@@ -166,7 +180,6 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   // Create temporary space to allow scrolling
   const createTemporarySpace = useCallback((requiredSpace: number) => {
     setTemporarySpaceHeight(requiredSpace);
-    // Don't auto-remove the space - it will be recalculated on next message
   }, []);
 
   const scrollMessageToTop = useCallback(
@@ -174,41 +187,37 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
       messageElement = messageElement || lastMessageRef.current || undefined;
       if (!messageElement) return;
 
-      const actualTopbarHeight = calculateOffset().topbar;
+      const { topbar, padding } = calculateOffset();
 
       const questionElement = messageElement;
       const questionHeight = questionElement.offsetHeight;
       const maxQuestionHeight = maxQuestionLines * lineHeight;
 
-      const messageTop = messageElement.offsetTop;
+      const messageOffsetTop = getOffsetTopFromPage(messageElement);
       const viewportHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
 
-      let scrollOffset: number;
-      if (questionHeight > maxQuestionHeight) {
-        // For long questions: leave max lines visible
-        scrollOffset =
-          questionHeight - maxQuestionHeight + actualTopbarHeight + 16;
+      let targetScrollTop;
 
-        console.log({
-          scrollOffset,
-          questionHeight,
-          maxQuestionHeight,
-          actualTopbarHeight,
-          targetScrollTop: messageTop - scrollOffset,
-          min: document.documentElement.scrollHeight - window.innerHeight,
-        });
+      if (questionHeight > maxQuestionHeight) {
+        // For long questions: scroll to show only the last part
+        targetScrollTop =
+          messageOffsetTop +
+          questionHeight -
+          maxQuestionHeight -
+          topbar -
+          padding;
       } else {
-        // For short questions: scroll near top
-        scrollOffset = actualTopbarHeight + 16;
+        // For short questions: scroll to show the top just below the topbar
+        targetScrollTop = messageOffsetTop - topbar - padding;
       }
 
-      const targetScrollTop = messageTop - scrollOffset;
       const maxScrollable = documentHeight - viewportHeight;
 
       let requiredSpace = 0;
       if (targetScrollTop > maxScrollable) {
-        requiredSpace = targetScrollTop - maxScrollable + 24;
+        requiredSpace = targetScrollTop - maxScrollable;
+
         createTemporarySpace(requiredSpace);
       }
 
@@ -242,7 +251,7 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
         }, 100); // Small delay to ensure DOM is updated
       } else {
         setTimeout(() => {
-          scrollToAssistantMessageBottom();
+          scrollToEnd();
         }, 100);
       }
     },
@@ -252,37 +261,27 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   // Handle auto-scroll for new messages when messages array changes
   useEffect(() => {
     if (messages.length > prevMessagesLength.current) {
-      const lastMessage = messages[messages.length - 1];
+      const lastMessage = messages.at(-1);
       const isNewUserMessage = lastMessage?.role === "user";
       const isNewAssistantMessage = lastMessage?.role === "assistant";
 
-      if (isNewAssistantMessage && isStreaming) return;
-
-      if (isNewAssistantMessage && status === "ready") {
-        console.log("reach auto scro chan ");
-        return handleNewMessage();
+      if (isNewUserMessage) {
+        handleNewMessage(isNewUserMessage);
+      } else if (isNewAssistantMessage && status === "ready") {
+        handleNewMessage();
       }
 
-      console.log(isStreaming);
-
-      handleNewMessage(isNewUserMessage);
       prevMessagesLength.current = messages.length;
     }
-  }, [messages, handleNewMessage, isStreaming, isReady]);
+  }, [messages, handleNewMessage, status]);
 
   useEffect(() => {
+    prevMessagesLength.current = 0;
+    setTemporarySpaceHeight(0);
     setTimeout(() => {
       scrollToEnd();
     }, 100);
   }, [currentConversationId]);
-
-  useEffect(() => {
-    return () => {
-      if (spaceTimeoutRef.current) {
-        clearTimeout(spaceTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return {
     messagesEndRef,
