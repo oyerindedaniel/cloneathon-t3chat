@@ -14,7 +14,6 @@ export function usePremiumModelHandler() {
     {
       refetchOnWindowFocus: false,
       refetchOnMount: false,
-      refetchOnReconnect: false,
     }
   );
 

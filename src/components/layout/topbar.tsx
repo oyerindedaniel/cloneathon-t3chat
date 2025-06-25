@@ -23,17 +23,9 @@ import { api } from "@/trpc/react";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useToast } from "@/hooks/use-toast";
 
-interface TopbarProps {
-  user?: {
-    name?: string | null;
-    email: string;
-    image?: string | null;
-  };
-}
-
-const TopbarComponent = function Topbar({ user }: TopbarProps) {
-  const { signOut } = useAuth();
-  const { toggleSidebar } = useSidebar();
+const TopbarComponent = function Topbar() {
+  const { user, signOut } = useAuth();
+  const { open, toggleSidebar } = useSidebar();
   const { openSettings } = useSettings();
   const { getShortcutDisplay, shortcuts } = useKeyboardShortcuts();
   const { currentConversationId } = useChatControls();
@@ -84,8 +76,13 @@ const TopbarComponent = function Topbar({ user }: TopbarProps) {
     }
   }, [signOut]);
 
+  const state = open ? "expanded" : "collapsed";
+
   return (
-    <div className="border-b border-default/30 bg-surface-primary px-6 py-4 fixed top-0 left-0 md:left-[calc(var(--sidebar-width))] h-[var(--topbar-height)] right-0 z-100 group-data-[state=collapsed]:!left-0 transition-transform">
+    <div
+      data-state={state}
+      className="border-b border-default/30 bg-surface-primary px-6 py-4 fixed top-0 left-0 md:left-[calc(var(--sidebar-width))] h-[var(--topbar-height)] right-0 z-100 data-[state=collapsed]:!left-0 transition-transform"
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
@@ -201,19 +198,4 @@ const TopbarComponent = function Topbar({ user }: TopbarProps) {
   );
 };
 
-function areEqual(prev: TopbarProps, next: TopbarProps): boolean {
-  const prevUser = prev.user;
-  const nextUser = next.user;
-
-  if (prevUser === nextUser) return true;
-
-  if (!prevUser || !nextUser) return false;
-
-  return (
-    prevUser.name === nextUser.name &&
-    prevUser.email === nextUser.email &&
-    prevUser.image === nextUser.image
-  );
-}
-
-export const Topbar = memo(TopbarComponent, areEqual);
+export const Topbar = TopbarComponent;

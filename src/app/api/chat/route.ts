@@ -52,6 +52,8 @@ const serverMessageIdGenerator = createIdGenerator({
   size: 16,
 });
 
+export const maxDuration = 60;
+
 async function getApiKey(): Promise<string> {
   const cookieStore = await cookies();
   const userApiKey = cookieStore.get("apikey_openrouter");

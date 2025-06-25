@@ -20,9 +20,12 @@ import { useGuestStorage } from "@/contexts/guest-storage-context";
 import { v4 as uuidv4 } from "uuid";
 import { TypingDots } from "@/components/typing-dots";
 import { AnimatePresence, motion } from "framer-motion";
+import { useSidebar } from "@/components/ui/sidebar";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
+  const { open } = useSidebar();
+  const state = open ? "expanded" : "collapsed";
 
   const {
     messages,
@@ -152,7 +155,7 @@ export default function ChatPage() {
         onRetry={handleRetryConnection}
       />
 
-      <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+3rem)]">
+      <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+4rem)]">
         <div className="flex flex-col gap-12">
           {messages.map((message, index) => (
             <div
@@ -194,7 +197,10 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div className="max-md:max-w-2xl max-md:w-full md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2">
+      <div
+        data-state={state}
+        className="max-md:max-w-2xl max-md:w-full data-[state=collapsed]:!max-w-2xl data-[state=collapsed]:!w-full data-[state=collapsed]:!left-2/4 md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2"
+      >
         <ChatInput
           onSubmit={handleMessageSubmit}
           onImageAttach={handleImageAttach}

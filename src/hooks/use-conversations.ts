@@ -243,7 +243,6 @@ export function useConversation({
       enabled: enabledForUserConversation,
       refetchOnWindowFocus: false,
       refetchOnMount: false,
-      refetchOnReconnect: false,
       retry: 1,
     }
   );
@@ -254,7 +253,6 @@ export function useConversation({
       enabled: enabledForSharedConversation,
       refetchOnWindowFocus: false,
       refetchOnMount: false,
-      refetchOnReconnect: false,
       retry: 1,
     }
   );

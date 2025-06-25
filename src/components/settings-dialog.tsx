@@ -56,13 +56,13 @@ export function SettingsDialog() {
   const queryOptions = {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    refetchOnReconnect: false,
   } as const;
 
   const { data: currentApiKey } = api.apiKeys.getApiKey.useQuery(
     { provider: "openrouter" },
     {
       ...queryOptions,
+      retry: 1,
     }
   );
 

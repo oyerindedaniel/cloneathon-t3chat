@@ -22,10 +22,8 @@ import { SettingsProvider } from "@/contexts/settings-context";
 import SharedConversationPage from "@/main/conversations/shared-conversation-page";
 
 function ConversationsWrapper() {
-  const { user } = useAuth();
-
   return (
-    <ConversationsLayout user={user}>
+    <ConversationsLayout>
       <Outlet />
     </ConversationsLayout>
   );

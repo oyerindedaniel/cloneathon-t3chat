@@ -246,7 +246,7 @@ export const AVAILABLE_MODELS: AIModel[] = [
 ];
 
 export const DEFAULT_MODEL = AVAILABLE_MODELS.find(
-  (m) => m.id === "meta-llama/llama-3.3-8b-instruct:free"
+  (m) => m.id === "deepseek/deepseek-r1-0528-qwen3-8b:free"
 )!;
 
 export const TITLE_GENERATION_MODEL = AVAILABLE_MODELS.find(
