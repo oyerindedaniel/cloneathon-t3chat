@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface ErrorAlertProps {
   isOpen: boolean;
   onClose: () => void;
+  variant?: "default" | "fixed";
   title: string;
   message: string;
   type?: "error" | "warning" | "info";
@@ -19,6 +20,7 @@ interface ErrorAlertProps {
 export const ErrorAlert = memo(function ErrorAlert({
   isOpen,
   onClose,
+  variant = "default",
   title,
   message,
   type = "error",
@@ -44,7 +46,10 @@ export const ErrorAlert = memo(function ErrorAlert({
     <Alert
       variant={type}
       className={cn(
-        "fixed top-[calc(var(--topbar-height)+1.5rem)] right-4 z-50 max-w-md shadow-lg animate-in slide-in-from-top-2 fade-in-0",
+        "shadow-lg",
+        variant === "default"
+          ? "w-full mt-5"
+          : "fixed top-[calc(var(--topbar-height)+1.5rem)] right-4 z-50 max-w-md animate-in slide-in-from-top-2 fade-in-0",
         className
       )}
       onMouseEnter={() => resetTimer?.()}

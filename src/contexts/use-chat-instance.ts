@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { useChat as useAIChat } from "@ai-sdk/react";
 import { createIdGenerator, Message } from "ai";
 import { useAutoResume } from "@/hooks/use-auto-resume";
@@ -7,37 +7,35 @@ import { useGuestStorage } from "@/contexts/guest-storage-context";
 import { useConversation } from "@/hooks/use-conversations";
 import { toAIMessages } from "@/lib/utils/message";
 import { Message as AIMessage } from "ai/react";
-import { LocationToolCall, AllToolResults } from "./chat-context";
-import React from "react";
+import type { LocationToolCall, ChatHelpers } from "./types";
 
 const messageIdGenerator = createIdGenerator({
   prefix: "msgc",
   size: 16,
 });
 
+let count = 0;
+
 interface UseChatInstanceProps {
   conversationId: string;
   isWebSearchEnabled: boolean;
+  isNewConversation: boolean;
   selectedModel: string;
   isGuest: boolean;
-  onChatReady: (conversationId: string, chatHelpers: any) => void;
+  onChatReady: (conversationId: string, chatHelpers: ChatHelpers) => void;
   onFinish: (conversationId: string, message: Message) => void;
   onToolCall: (conversationId: string, toolCall: LocationToolCall) => void;
-  onAppend: (
-    conversationId: string,
-    message: Omit<AIMessage, "id"> | Omit<AIMessage, "id">[]
-  ) => void;
 }
 
 export function useChatInstance({
   conversationId,
   isWebSearchEnabled,
+  isNewConversation,
   selectedModel,
   isGuest,
   onChatReady,
   onFinish,
   onToolCall,
-  onAppend,
 }: UseChatInstanceProps) {
   const guestStorage = useGuestStorage();
   const currentConversationIdRef = useLatestValue(conversationId);
@@ -50,7 +48,7 @@ export function useChatInstance({
     isLoading: conversationLoading,
   } = useConversation({ id: conversationId, isNewConversation: false });
 
-  const initialMessages = React.useMemo<AIMessage[]>(() => {
+  const initialMessages = useMemo<AIMessage[]>(() => {
     if (isGuest && conversationId) {
       const guestConversation = guestStorage.getConversation(conversationId);
       return guestConversation?.messages || [];
@@ -70,7 +68,7 @@ export function useChatInstance({
     maxSteps: 5,
     experimental_prepareRequestBody: ({ messages }) => {
       return {
-        message: messages[messages.length - 1],
+        message: messages.at(-1),
         id: currentConversationIdRef.current,
         isWebSearchEnabled: isWebSearchEnabledRef.current,
         modelId: selectedModelRef.current,
@@ -99,7 +97,6 @@ export function useChatInstance({
     },
   });
 
-  // Auto-resume functionality
   useAutoResume({
     autoResume: !isGuest && !!conversationId,
     initialMessages: chat.messages,
@@ -108,38 +105,34 @@ export function useChatInstance({
     setMessages: chat.setMessages,
   });
 
-  // Register chat instance when ready and handle message updates
   useEffect(() => {
+    console.log("on chat ready useeffect", {
+      conversationId,
+      count: count + 1,
+    });
     onChatReady(conversationId, chat);
+  }, [conversationId, chat]);
 
-    // Handle message changes for onAppend callback
-    const currentMessages = chat.messages;
-    if (currentMessages.length > 0) {
-      // Only call onAppend for new messages, not initial load
-      const lastMessage = currentMessages[currentMessages.length - 1];
-      if (lastMessage && !lastMessage.id.startsWith("initial-")) {
-        // This ensures we don't double-append on initial load
-        onAppend(conversationId, lastMessage);
-      }
-    }
-  }, [conversationId, chat, onChatReady, onAppend, chat.messages]);
-
-  // Handle conversation loading and message synchronization
   useEffect(() => {
-    if (conversationStatus === "success" && !conversationLoading) {
-      const messagesToSet = initialMessages.length > 0 ? initialMessages : [];
-      const shouldUpdateMessages =
-        chat.messages.length !== messagesToSet.length ||
-        (messagesToSet.length > 0 &&
-          messagesToSet[messagesToSet.length - 1]?.id !==
-            chat.messages[chat.messages.length - 1]?.id);
+    if (
+      conversationStatus !== "success" ||
+      conversationLoading ||
+      isNewConversation
+    )
+      return;
 
-      if (shouldUpdateMessages) {
-        chat.setMessages(messagesToSet);
-      }
+    const messagesToSet = initialMessages ?? [];
+    const lastInitialMessageId = messagesToSet.at(-1)?.id;
+    const lastChatMessageId = chat.messages.at(-1)?.id;
+
+    const shouldUpdateMessages =
+      chat.messages.length !== messagesToSet.length ||
+      lastInitialMessageId !== lastChatMessageId;
+
+    if (shouldUpdateMessages) {
+      chat.setMessages(messagesToSet);
     }
   }, [
-    conversationId,
     conversationStatus,
     conversationLoading,
     initialMessages,

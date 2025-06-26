@@ -21,6 +21,7 @@ import { flushSync } from "react-dom";
 import { toAIMessage, toAIMessages } from "@/lib/utils/message";
 import { TypingDots } from "@/components/typing-dots";
 import { ForkNotice } from "@/components/fork-notice";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function SharedConversationPage() {
   const { shareId } = useParams<{ shareId: string }>();
@@ -129,6 +130,7 @@ export default function SharedConversationPage() {
       <div className="h-full flex flex-col grid-pattern-background px-8">
         <ErrorAlert
           isOpen={true}
+          variant="fixed"
           onClose={() => router.push("/conversations")}
           title="Shared Conversation Not Found"
           message={
@@ -166,8 +168,31 @@ export default function SharedConversationPage() {
                 />
               </div>
             ))}
+            <ErrorAlert
+              isOpen={alertState.isOpen}
+              onClose={hideAlert}
+              title={alertState.title}
+              message={alertState.message}
+              type={alertState.type}
+              onResume={reload}
+              showResume={
+                status === "error" && alertState.title === "Streaming Error"
+              }
+              resetTimer={resetTimer}
+            />
+            <AnimatePresence>
+              {status === "submitted" && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <TypingDots />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {status === "submitted" && <TypingDots />}
             <div ref={messagesEndRef} />
 
             {temporarySpaceHeight > 0 && (
@@ -205,19 +230,6 @@ export default function SharedConversationPage() {
           />
         </div>
       </div>
-
-      <ErrorAlert
-        isOpen={alertState.isOpen}
-        onClose={hideAlert}
-        title={alertState.title}
-        message={alertState.message}
-        type={alertState.type}
-        onResume={reload}
-        showResume={
-          status === "error" && alertState.title === "Streaming Error"
-        }
-        resetTimer={resetTimer}
-      />
     </>
   );
 }

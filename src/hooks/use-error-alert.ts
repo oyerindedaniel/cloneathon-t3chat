@@ -15,11 +15,6 @@ interface AlertState {
   type: ErrorType;
 }
 
-interface ConversationError {
-  isError: boolean;
-  error: unknown;
-}
-
 interface UseErrorAlertOptions {
   autoHideDuration?: number;
 }
@@ -64,7 +59,7 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
         type,
       });
 
-      startTimeout();
+      // startTimeout();
     },
     [startTimeout]
   );
@@ -76,7 +71,7 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
 
   const resetTimer = useCallback(() => {
     if (alertState.isOpen) {
-      startTimeout();
+      // startTimeout();
     }
   }, [alertState.isOpen, startTimeout]);
 

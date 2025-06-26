@@ -17,7 +17,6 @@ import { ErrorAlert } from "@/components/error-alert";
 import { ConnectionStatus } from "@/components/ui/connection-status";
 import { useConnectionStatus } from "@/hooks/use-connection-status";
 import { useGuestStorage } from "@/contexts/guest-storage-context";
-import { v4 as uuidv4 } from "uuid";
 import { TypingDots } from "@/components/typing-dots";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -37,7 +36,8 @@ export default function ChatPage() {
     addToolResult,
   } = useChatMessages();
   const { selectedModel, setSelectedModel } = useChatConfig();
-  const { isNewConversation, setCurrentConversationId } = useChatControls();
+  const { isNewConversation, handleChatPageOnLoad, handleNewMessage } =
+    useChatControls();
   const {
     isConversationLoading,
     isGuest,
@@ -62,27 +62,16 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (id && !isNewConversation) {
-      setCurrentConversationId(id);
+      handleChatPageOnLoad(id);
     }
-  }, [id, setCurrentConversationId, isNewConversation]);
+  }, [id, handleChatPageOnLoad, isNewConversation]);
 
   const handleMessageSubmit = useCallback(
     (message: string) => {
       if (!message.trim() || status === "streaming") return;
 
       try {
-        if (isGuest) {
-          guestStorage.addMessage(id!, {
-            id: uuidv4(),
-            role: "user",
-            content: message,
-            createdAt: new Date(),
-          });
-        }
-        append({
-          role: "user",
-          content: message,
-        });
+        handleNewMessage(message);
       } catch (error) {
         handleApiError(error, "sending message");
       }
@@ -147,6 +136,8 @@ export default function ChatPage() {
     );
   }
 
+  console.log({ messages, status });
+
   return (
     <div className="flex flex-col grid-pattern-background h-full px-8">
       <ConnectionStatus
@@ -173,6 +164,18 @@ export default function ChatPage() {
               />
             </div>
           ))}
+          <ErrorAlert
+            isOpen={alertState.isOpen}
+            onClose={hideAlert}
+            title={alertState.title}
+            message={alertState.message}
+            type={alertState.type}
+            onResume={reload}
+            showResume={
+              status === "error" && alertState.title === "Streaming Error"
+            }
+            resetTimer={resetTimer}
+          />
           <AnimatePresence>
             {status === "submitted" && (
               <motion.div
@@ -185,6 +188,7 @@ export default function ChatPage() {
               </motion.div>
             )}
           </AnimatePresence>
+
           <div ref={messagesEndRef} />
 
           {temporarySpaceHeight > 0 && (
@@ -215,19 +219,6 @@ export default function ChatPage() {
           maxMessages={maxMessages}
         />
       </div>
-
-      <ErrorAlert
-        isOpen={alertState.isOpen}
-        onClose={hideAlert}
-        title={alertState.title}
-        message={alertState.message}
-        type={alertState.type}
-        onResume={reload}
-        showResume={
-          status === "error" && alertState.title === "Streaming Error"
-        }
-        resetTimer={resetTimer}
-      />
     </div>
   );
 }

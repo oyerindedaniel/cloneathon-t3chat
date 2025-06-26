@@ -65,7 +65,16 @@ export function ReasoningDisplay({
             <span className="text-sm font-medium text-foreground-default">
               {isStreaming ? "Reasoning..." : "Reasoning"}
             </span>
-            {isStreaming && <TypingDots className="self-end" />}
+            {isStreaming && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <TypingDots className="self-end" />
+              </motion.div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

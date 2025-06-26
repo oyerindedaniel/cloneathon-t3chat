@@ -3,16 +3,13 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type {
-  AllToolResults,
-  GetLocationResult,
-} from "@/contexts/chat-context";
+import type { ChatHelpers, GetLocationResult } from "@/contexts/types";
 
 interface LocationPermissionRequestProps {
   toolCallId: string;
   message: string;
-  onConfirm: (toolResult: AllToolResults) => void;
-  onDeny: (toolResult: AllToolResults) => void;
+  onConfirm: ChatHelpers["addToolResult"];
+  onDeny: ChatHelpers["addToolResult"];
 }
 
 export const LocationPermissionRequest: React.FC<
@@ -27,8 +24,6 @@ export const LocationPermissionRequest: React.FC<
           const result: GetLocationResult = { latitude, longitude, timezone };
           onConfirm({
             toolCallId,
-            toolName: "getLocation",
-            args: { message },
             result,
           });
         },
@@ -41,8 +36,6 @@ export const LocationPermissionRequest: React.FC<
           const result: GetLocationResult = { error: errorMessage };
           onDeny({
             toolCallId,
-            toolName: "getLocation",
-            args: { message },
             result,
           });
         }
@@ -51,8 +44,6 @@ export const LocationPermissionRequest: React.FC<
       const result: GetLocationResult = { error: "not_supported" };
       onDeny({
         toolCallId,
-        toolName: "getLocation",
-        args: { message },
         result,
       });
     }
@@ -62,8 +53,6 @@ export const LocationPermissionRequest: React.FC<
     const result: GetLocationResult = { error: "permission_denied" };
     onDeny({
       toolCallId,
-      toolName: "getLocation",
-      args: { message },
       result,
     });
   };
