@@ -68,6 +68,13 @@ export const ChatMessage = memo(function ChatMessage({
             //       <hr className="flex-grow border-t border-border-default" />
             //     </div>
             //   ) : null;
+            case "text":
+              const textPart = part;
+              return (
+                <div className="text-sm leading-relaxed text-foreground-default">
+                  <MarkdownRenderer content={textPart.text} />
+                </div>
+              );
             case "reasoning":
               const reasoningPart = part;
               return (
@@ -76,13 +83,6 @@ export const ChatMessage = memo(function ChatMessage({
                   reasoningPart={reasoningPart}
                   isStreaming={status === "streaming"}
                 />
-              );
-            case "text":
-              const textPart = part;
-              return (
-                <div className="text-sm leading-relaxed text-foreground-default">
-                  <MarkdownRenderer content={textPart.text} />
-                </div>
               );
             case "tool-invocation":
               const toolInvocationPart = part;

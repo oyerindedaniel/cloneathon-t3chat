@@ -265,9 +265,13 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
       const isNewUserMessage = lastMessage?.role === "user";
       const isNewAssistantMessage = lastMessage?.role === "assistant";
 
+      console.log({ status });
+
       if (isNewUserMessage) {
+        console.log("in user message");
         handleNewMessage(isNewUserMessage);
       } else if (isNewAssistantMessage && status === "ready") {
+        console.log("in assitant message");
         handleNewMessage();
       }
 
@@ -278,6 +282,7 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   useEffect(() => {
     prevMessagesLength.current = 0;
     setTemporarySpaceHeight(0);
+    console.log("in here");
     setTimeout(() => {
       scrollToEnd();
     }, 100);
