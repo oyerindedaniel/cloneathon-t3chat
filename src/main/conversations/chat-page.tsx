@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "react-router-dom";
-import { useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatInput } from "@/components/chat/chat-input";
 import { MessageSkeleton } from "@/components/chat/message-skeleton";
@@ -16,25 +16,18 @@ import { useErrorAlert } from "@/hooks/use-error-alert";
 import { ErrorAlert } from "@/components/error-alert";
 import { ConnectionStatus } from "@/components/ui/connection-status";
 import { useConnectionStatus } from "@/hooks/use-connection-status";
-import { useGuestStorage } from "@/contexts/guest-storage-context";
 import { TypingDots } from "@/components/typing-dots";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-Isomorphic-layout-effect";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
   const { open } = useSidebar();
   const state = open ? "expanded" : "collapsed";
 
-  const {
-    messages,
-    append,
-    stop,
-    reload,
-    status,
-    experimental_resume,
-    addToolResult,
-  } = useChatMessages();
+  const { messages, stop, reload, status, experimental_resume, addToolResult } =
+    useChatMessages();
   const { selectedModel, setSelectedModel } = useChatConfig();
   const { isNewConversation, handleChatPageOnLoad, handleNewMessage } =
     useChatControls();
@@ -56,15 +49,13 @@ export default function ChatPage() {
   const { isConnected, isResuming, startResuming, stopResuming } =
     useConnectionStatus();
 
-  const { alertState, hideAlert, handleApiError, resetTimer } = useErrorAlert();
+  const { alertState, hideAlert, handleApiError } = useErrorAlert();
 
-  const guestStorage = useGuestStorage();
-
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (id && !isNewConversation) {
       handleChatPageOnLoad(id);
     }
-  }, [id, handleChatPageOnLoad, isNewConversation]);
+  }, [id, isNewConversation, handleChatPageOnLoad]);
 
   const handleMessageSubmit = useCallback(
     (message: string) => {
@@ -76,7 +67,7 @@ export default function ChatPage() {
         handleApiError(error, "sending message");
       }
     },
-    [status, handleApiError, append, isGuest, guestStorage, id]
+    [status, handleNewMessage, handleApiError]
   );
 
   const handleReload = () => {
@@ -136,8 +127,6 @@ export default function ChatPage() {
     );
   }
 
-  console.log({ messages, status });
-
   return (
     <div className="flex flex-col grid-pattern-background h-full px-8">
       <ConnectionStatus
@@ -171,10 +160,7 @@ export default function ChatPage() {
             message={alertState.message}
             type={alertState.type}
             onResume={reload}
-            showResume={
-              status === "error" && alertState.title === "Streaming Error"
-            }
-            resetTimer={resetTimer}
+            showResume={status === "error"}
           />
           <AnimatePresence>
             {status === "submitted" && (
@@ -188,7 +174,6 @@ export default function ChatPage() {
               </motion.div>
             )}
           </AnimatePresence>
-
           <div ref={messagesEndRef} />
 
           {temporarySpaceHeight > 0 && (

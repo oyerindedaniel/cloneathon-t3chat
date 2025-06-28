@@ -77,10 +77,9 @@ export const ErrorAlert = memo(function ErrorAlert({
                 onResume();
                 onClose();
               }}
-              className="h-8 px-3 rounded-full"
             >
               <RotateCcw className="w-3 h-3 mr-1" />
-              Resume
+              Retry
             </Button>
           </div>
         )}

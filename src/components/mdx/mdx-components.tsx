@@ -97,7 +97,10 @@ const H6 = ({
 // Text components
 const P = ({ className, ...props }: React.HTMLAttributes<HTMLElement>) => (
   <p
-    className={cn("text-foreground-default leading-relaxed mb-3", className)}
+    className={cn(
+      "text-foreground-default leading-relaxed mb-3 group-[.reasoning]:font-mono group-[.reasoning]:whitespace-pre-wrap group-[.reasoning]:text-xs group-[.reasoning]:text-foreground-subtle",
+      className
+    )}
     {...props}
   />
 );

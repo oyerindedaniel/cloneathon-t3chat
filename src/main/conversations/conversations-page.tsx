@@ -23,6 +23,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useChatMessages } from "@/contexts/chat-context";
 
 export default function ConversationsPage() {
   const {
@@ -31,8 +32,8 @@ export default function ConversationsPage() {
     isWebSearchEnabled,
     toggleWebSearch,
   } = useChatConfig();
-  const { startNewConversationInstant, isCreatingConversation } =
-    useChatControls();
+  const { startNewConversationInstant } = useChatControls();
+  const { status } = useChatMessages();
 
   const {
     isGuest,
@@ -44,7 +45,9 @@ export default function ConversationsPage() {
 
   const isAtLimit = isGuest && !canSendMessage;
 
-  const effectiveDisabled = isCreatingConversation || isAtLimit;
+  const isProcessing = status === "streaming" || status === "submitted";
+
+  const effectiveDisabled = isAtLimit || isProcessing;
 
   const [autosizeRef, resize] = useAutosizeTextArea(130);
 
@@ -63,26 +66,20 @@ export default function ConversationsPage() {
 
       const message = inputRef.value;
 
-      if (!message || !message.trim() || isCreatingConversation || isAtLimit)
-        return;
+      if (!message || !message.trim() || isAtLimit) return;
 
       const messageToSend = message.trim();
 
       inputRef.value = "";
 
       try {
-        await startNewConversationInstant(messageToSend, selectedModel);
+        startNewConversationInstant(messageToSend, selectedModel);
       } catch (error) {
         console.error("Failed to start conversation:", error);
         inputRef.value = messageToSend;
       }
     },
-    [
-      selectedModel,
-      startNewConversationInstant,
-      isCreatingConversation,
-      isAtLimit,
-    ]
+    [selectedModel, startNewConversationInstant, isAtLimit]
   );
 
   const handleKeyDown = useCallback(
@@ -225,7 +222,7 @@ export default function ConversationsPage() {
                     disabled={isEmpty || effectiveDisabled}
                     aria-label="Send message"
                   >
-                    {isCreatingConversation ? (
+                    {isProcessing ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <SendHorizontal className="w-4 h-4" />

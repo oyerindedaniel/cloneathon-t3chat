@@ -44,7 +44,7 @@ export function ReasoningDisplay({
         )}
       >
         <div className="flex items-center justify-between p-4 border-b border-subtle">
-          <div className="flex items-center gap-2">
+          <div className="flex gap-2">
             <div className="relative">
               <Brain className="w-4 h-4 text-primary" />
               {isStreaming && (
@@ -62,7 +62,7 @@ export function ReasoningDisplay({
                 />
               )}
             </div>
-            <span className="text-sm font-medium text-foreground-default">
+            <span className="text-sm font-medium self-center text-foreground-default">
               {isStreaming ? "Reasoning..." : "Reasoning"}
             </span>
             {isStreaming && (
@@ -71,8 +71,9 @@ export function ReasoningDisplay({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
+                className="self-end"
               >
-                <TypingDots className="self-end" />
+                <TypingDots size="sm" />
               </motion.div>
             )}
           </div>
@@ -116,7 +117,7 @@ export function ReasoningDisplay({
               <div className="p-4">
                 <div
                   className={cn(
-                    "relative text-sm text-foreground-default leading-relaxed",
+                    "relative text-sm text-foreground-default leading-relaxed group/reasoning",
                     "max-h-[300px] overflow-y-auto"
                   )}
                 >

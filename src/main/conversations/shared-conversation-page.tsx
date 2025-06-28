@@ -175,9 +175,7 @@ export default function SharedConversationPage() {
               message={alertState.message}
               type={alertState.type}
               onResume={reload}
-              showResume={
-                status === "error" && alertState.title === "Streaming Error"
-              }
+              showResume={status === "error"}
               resetTimer={resetTimer}
             />
             <AnimatePresence>
