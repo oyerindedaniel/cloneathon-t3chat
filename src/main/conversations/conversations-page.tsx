@@ -127,13 +127,16 @@ export default function ConversationsPage() {
         />
         <div className="flex flex-col items-center justify-center h-full gap-8 max-w-4xl mx-auto">
           <div className="text-center space-y-4">
-            <div className="flex items-center justify-center gap-2 text-primary">
+            {/* <div className="flex items-center justify-center gap-2 text-primary">
               <Sparkles className="w-8 h-8" />
               <h1 className="text-3xl font-bold tracking-tight">T3 Chat</h1>
-            </div>
-            <p className="text-foreground-muted text-lg max-w-2xl">
+            </div> */}
+            {/* <p className="text-foreground-muted text-lg max-w-2xl">
               Ask me anything and I'll help you with coding, analysis, creative
               writing, and more.
+            </p> */}
+            <p className="text-foreground-muted text-2xl max-w-2xl">
+              Ask me anything
             </p>
           </div>
 

@@ -186,19 +186,6 @@ export const AVAILABLE_MODELS: AIModel[] = [
     free: true,
   },
   {
-    id: "meta-llama/llama-3.3-8b-instruct:free",
-    name: "Llama 3.3 8B Instruct (Free)",
-    provider: "Meta",
-    description:
-      "Lightweight and ultra-fast variant of Llama 3.3 70B, for quick response times",
-    maxTokens: 128000,
-    costPer1kTokens: { input: 0, output: 0 },
-    capabilities: ["Tool Usage"],
-    free: true,
-    recommended: true,
-  },
-
-  {
     id: "meta-llama/llama-3.1-70b-instruct",
     name: "Llama 3.1 70B",
     provider: "Meta",
@@ -208,6 +195,7 @@ export const AVAILABLE_MODELS: AIModel[] = [
     capabilities: ["Tool Usage"],
     disabled: true,
     disabledReason: "Requires credits - upgrade to use premium models",
+    free: true,
   },
 ];
 

@@ -12,9 +12,9 @@ const alertVariants = cva(
         success:
           "bg-success/10 border-success/20 text-success [&>svg]:text-success shadow-sm ring-1 ring-success/10",
         warning:
-          "bg-warning/10 border-warning/20 text-success [&>svg]:text-success shadow-sm ring-1 ring-warning/10",
+          "bg-warning/10 border-warning/20 text-success [&>svg]:text-warning shadow-sm ring-1 ring-warning/10",
         error:
-          "bg-error/10 border-error/20 text-error [&>svg]:text-success shadow-sm ring-1 ring-error/10",
+          "bg-error/10 border-error/20 text-error [&>svg]:text-error shadow-sm ring-1 ring-error/10",
         info: "bg-info/10 border-info/20 text-info [&>svg]:text-info shadow-sm ring-1 ring-info/10",
       },
     },

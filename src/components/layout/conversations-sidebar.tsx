@@ -14,6 +14,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { v4 as uuidv4 } from "uuid";
 import { useConversations } from "@/hooks/use-conversations";
 import { useNavigate, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -64,7 +65,7 @@ export function ConversationsSidebar() {
 
   const guestStorage = useGuestStorage();
 
-  const { switchToConversation } = useChatControls();
+  const { switchToConversation, handleNewConversation } = useChatControls();
 
   const isGuest = !isAuthenticated;
   const allConversations: DisplayConversation[] = useMemo(() => {
@@ -102,10 +103,6 @@ export function ConversationsSidebar() {
     return shortcuts.find((s) => s.description === "New chat");
   }, [shortcuts]);
 
-  const handleNewConversation = useCallback(() => {
-    navigate("/conversations");
-  }, [navigate]);
-
   const handleConversationClick = useCallback(
     (conversationId: string) => {
       if (editingId === conversationId) return;
@@ -115,7 +112,6 @@ export function ConversationsSidebar() {
       );
 
       switchToConversation(conversationId, conversation?.model);
-      navigate(`/conversations/${conversationId}`);
     },
     [editingId, filteredDisplayConversations, navigate, switchToConversation]
   );

@@ -24,6 +24,7 @@ import { useIsomorphicLayoutEffect } from "@/hooks/use-Isomorphic-layout-effect"
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
   const { open } = useSidebar();
+
   const state = open ? "expanded" : "collapsed";
 
   const { messages, stop, reload, status, experimental_resume, addToolResult } =
@@ -49,13 +50,16 @@ export default function ChatPage() {
   const { isConnected, isResuming, startResuming, stopResuming } =
     useConnectionStatus();
 
-  const { alertState, hideAlert, handleApiError } = useErrorAlert();
+  const { alertState, hideAlert, handleApiError } = useErrorAlert({
+    conversationId: id,
+  });
 
+  // TODO: using handleChatPageOnLoad as a dep causing infinite rerender becos coreChat is not stable
   useIsomorphicLayoutEffect(() => {
     if (id && !isNewConversation) {
       handleChatPageOnLoad(id);
     }
-  }, [id, isNewConversation, handleChatPageOnLoad]);
+  }, [id, isNewConversation]);
 
   const handleMessageSubmit = useCallback(
     (message: string) => {
@@ -132,7 +136,11 @@ export default function ChatPage() {
       <ConnectionStatus
         isConnected={isConnected}
         isResuming={isResuming}
-        onRetry={handleRetryConnection}
+        onRetry={
+          messages && messages.at(-1)?.role === "user"
+            ? handleRetryConnection
+            : undefined
+        }
       />
 
       <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+4rem)]">

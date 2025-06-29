@@ -1,10 +1,19 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useLayoutEffect,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { getErrorDisplayInfo } from "@/lib/utils/openrouter-errors";
 import { useSettings } from "@/contexts/settings-context";
 import { TRPCClientError } from "@trpc/client";
 import type { AppRouter } from "@/server/api/root";
 import { useChatSessionStatus, useChatMessages } from "@/contexts/chat-context";
+import { useGuestStorage } from "@/contexts/guest-storage-context";
+import { useAuth } from "./use-auth";
+import { useToast } from "./use-toast";
 
 export type ErrorType = "error" | "warning" | "info";
 
@@ -16,25 +25,32 @@ interface AlertState {
 }
 
 interface UseErrorAlertOptions {
+  conversationId?: string;
   autoHideDuration?: number;
 }
 
+const defaultAlertState: AlertState = {
+  isOpen: false,
+  title: "",
+  message: "",
+  type: "error",
+};
+
 export function useErrorAlert(options: UseErrorAlertOptions = {}) {
-  const { autoHideDuration = 5000 } = options;
+  const { autoHideDuration = 5000, conversationId = "" } = options;
 
   const navigate = useNavigate();
+  const guestStorage = useGuestStorage();
+  const { isAuthenticated, user } = useAuth();
+
+  const isGuest = !isAuthenticated;
   const { openSettings } = useSettings();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const { conversationError, isConversationError } = useChatSessionStatus();
   const { error: chatError } = useChatMessages();
 
-  const [alertState, setAlertState] = useState<AlertState>({
-    isOpen: false,
-    title: "",
-    message: "",
-    type: "error",
-  });
+  const [alertState, setAlertState] = useState<AlertState>(defaultAlertState);
 
   const clearTimeoutRef = useCallback(() => {
     if (timeoutRef.current) {
@@ -147,6 +163,14 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
     });
   }, [showAlert]);
 
+  // since react router by default does not unmount. This reset conversationId tied state
+  // runs before the useeffect
+  useLayoutEffect(() => {
+    if (conversationId) {
+      setAlertState(defaultAlertState);
+    }
+  }, [conversationId]);
+
   // Handle conversation errors
   useEffect(() => {
     if (isConversationError && conversationError) {
@@ -154,15 +178,14 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
       const data = error.data;
 
       if (data?.code === "NOT_FOUND") {
-        navigate("/conversations");
-        setTimeout(() => {
-          showAlert({
-            title: "Conversation Error",
-            message:
-              error.message || "Failed to load conversation. Please try again.",
-            type: "error",
-          });
-        }, 250);
+        // navigate("/conversations");
+
+        showAlert({
+          title: "Conversation Error",
+          message:
+            error.message || "Failed to load conversation. Please try again.",
+          type: "error",
+        });
       } else if (data?.code === "UNAUTHORIZED") {
         navigate("/login");
       } else {
@@ -175,6 +198,23 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
     navigate,
     handleConversationLoadError,
   ]);
+
+  useEffect(() => {
+    if (
+      isGuest &&
+      conversationId &&
+      !guestStorage.getConversation(conversationId)?.messages.length
+    ) {
+      // navigate("/conversations");
+      // setTimeout(() => {
+      showAlert({
+        title: "Conversation Error",
+        message: "Failed to load conversation. Please try again.",
+        type: "error",
+      });
+      // }, 150);
+    }
+  }, [conversationId, isGuest, guestStorage, navigate]);
 
   // Handle stream errors
   // useEffect(() => {

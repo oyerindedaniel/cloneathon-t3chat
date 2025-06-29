@@ -42,6 +42,7 @@ interface ChatContextType extends ChatHelpers {
   setCurrentConversationId: (conversationId: string) => void;
   handleNewMessage: (message: string) => void;
   handleChatPageOnLoad: (conversationId: string) => void;
+  handleNewConversation: () => void;
   isNewConversation: boolean;
   setIsNewConversation: (value: boolean) => void;
   isGuest: boolean;
@@ -60,14 +61,17 @@ const messageIdGenerator = createIdGenerator({
   size: 16,
 });
 
+const initialConversationId = uuidv4();
+
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { showToast } = useToast();
   const { isAuthenticated, user } = useAuth();
   const userId = user?.id;
   const navigate = useNavigate();
-  const [currentConversationId, setCurrentConversationId] = useState<
-    string | null
-  >(null);
+
+  const [currentConversationId, setCurrentConversationId] = useState<string>(
+    initialConversationId
+  );
   const currentConversationIdRef = useLatestValue(currentConversationId);
 
   const previousTitleRef = useRef<string | null>(null);
@@ -76,7 +80,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isNewConversation, setIsNewConversation] = useState(false);
   const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
   const isWebSearchEnabledRef = useLatestValue(isWebSearchEnabled);
-  const previousConversationIdRef = useRef<string | null>(null);
+  const previousConversationIdRef = useRef<string>(initialConversationId);
   const isFirstConversationTitleCreated = useRef(false);
 
   const guestStorage = useGuestStorage();
@@ -117,6 +121,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
 
         const title = await response.text();
+        console.log("in generate tit", {
+          convId,
+          currentConversation: currentConversationIdRef.current,
+        });
         if (convId === currentConversationIdRef.current) {
           isFirstConversationTitleCreated.current = true;
         }
@@ -182,11 +190,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const [backgroundConversationIds, setBackgroundConversationIds] = useState<
     string[]
-  >([]);
+  >([initialConversationId]);
 
   const backgroundConversationIdsRef = useLatestValue(
     backgroundConversationIds
   );
+
+  const hasInitializedCoreChatMessages = useRef(false);
 
   const initialMessagesForCoreChat = useMemo<AIMessage[]>(() => {
     if (currentConversationId) {
@@ -289,7 +299,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     },
   });
 
-  console.log({ currentConversationId });
+  console.log("core bitch ----", {
+    currentConversationId,
+    coreChat,
+    initialConversationId,
+  });
 
   useAutoResume({
     autoResume: isAuthenticated && !!currentConversationId,
@@ -301,30 +315,31 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   // Persist fetch conversations for authenticated user
   useEffect(() => {
-    if (!isNewConversation || initialMessagesForCoreChat.length === 0) return;
     if (
-      conversationStatus === "success" &&
-      coreChat.messages.length !== initialMessagesForCoreChat.length &&
-      coreChat.id === conversation?.id
+      hasInitializedCoreChatMessages.current ||
+      isNewConversation ||
+      initialMessagesForCoreChat.length === 0
     ) {
+      return;
+    }
+
+    if (conversationStatus === "success" && coreChat.id === conversation?.id) {
       coreChat.setMessages(initialMessagesForCoreChat);
+      hasInitializedCoreChatMessages.current = true;
     }
   }, [
-    initialMessagesForCoreChat.length,
-    conversationStatus,
-    coreChat.messages.length,
     isNewConversation,
+    initialMessagesForCoreChat,
+    conversationStatus,
+    coreChat,
     conversation?.id,
   ]);
 
   useEffect(() => {
-    if (isNewConversation) {
-      isFirstConversationTitleCreated.current = false;
-      return;
-    }
+    if (isNewConversation) return;
 
     const hasTitle = isGuest
-      ? !!guestStorage.getConversation(currentConversationId || "")?.title
+      ? !!guestStorage.getConversation(currentConversationId)?.title
       : !!conversation?.title;
     isFirstConversationTitleCreated.current = hasTitle;
   }, [
@@ -344,33 +359,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const oldConversationId = previousConversationIdRef.current;
 
     setBackgroundConversationIds((prevBackgroundIds) => {
-      const newBackgroundIdsSet = new Set(prevBackgroundIds);
+      const updatedIds = new Set<typeof currentConversationId>();
 
-      if (oldConversationId && oldConversationId !== newConversationId) {
-        const oldCoreChatInstance =
-          activeChatInstances.current.get(oldConversationId);
-        if (oldCoreChatInstance && oldCoreChatInstance.status === "streaming") {
-          newBackgroundIdsSet.add(oldCoreChatInstance.id);
+      for (const id of prevBackgroundIds) {
+        const chatInstance = activeChatInstances.current.get(id);
+        if (chatInstance?.status === "streaming") {
+          updatedIds.add(id);
         }
       }
 
-      // if (newConversationId) {
-      //   newBackgroundIdsSet.delete(newConversationId);
-      // }
+      updatedIds.add(newConversationId);
 
-      return Array.from(newBackgroundIdsSet);
+      return Array.from(updatedIds);
     });
-
-    if (
-      newConversationId &&
-      !activeChatInstances.current.has(newConversationId)
-    ) {
-      console.log("handleConversationChangeSync", {
-        coreChat,
-        newConversationId,
-      });
-      activeChatInstances.current.set(newConversationId, coreChat);
-    }
 
     const allExpectedActiveIds = new Set();
     if (newConversationId) {
@@ -394,18 +395,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    const oldInstance = oldConversationId
+      ? activeChatInstances.current.get(oldConversationId)
+      : null;
+
+    console.log("swap now in bitch", {
+      activeChatInstances: activeChatInstances.current,
+    });
+
+    if (oldInstance?.status === "streaming") {
+      console.log("you are sti stremaing", oldInstance?.id);
+      setTimeout(() => {
+        navigate(`/conversations/${newConversationId}`);
+      }, 50);
+    } else {
+      navigate(`/conversations/${newConversationId}`);
+    }
+
     previousConversationIdRef.current = newConversationId;
   };
-
-  useEffect(() => {
-    if (
-      isGuest &&
-      currentConversationId &&
-      !guestStorage.getConversation(currentConversationId)?.messages.length
-    ) {
-      navigate("/conversations");
-    }
-  }, [currentConversationId, isGuest, guestStorage, navigate]);
 
   const setSelectedModel = useCallback((modelId: string) => {
     setSelectedModelState(modelId);
@@ -414,7 +422,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const startNewConversationInstant = useCallback(
     (message: string, modelId?: string): string => {
       const effectiveModelId = modelId || selectedModel;
-      const conversationId = uuidv4();
+      const conversationId = currentConversationId;
 
       const initialTitle =
         message.length > 50 ? `${message.slice(0, 47)}...` : message;
@@ -425,15 +433,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           navigate(`/conversations/${conversationId}`, { replace: true });
         });
 
-        setCurrentConversationId(conversationId);
         setSelectedModelState(effectiveModelId);
-        setBackgroundConversationIds((prevBackgroundIds) => {
-          if (prevBackgroundIds.includes(conversationId)) {
-            return prevBackgroundIds;
-          }
-
-          return [...prevBackgroundIds, conversationId];
-        });
 
         if (isGuest) {
           guestStorage.addConversation({
@@ -503,7 +503,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         return "";
       }
     },
-    [selectedModel, navigate, isGuest, guestStorage, userId, utils, coreChat]
+    [
+      selectedModel,
+      navigate,
+      isGuest,
+      guestStorage,
+      userId,
+      utils,
+      coreChat,
+      currentConversationId,
+    ]
   );
 
   const switchToConversation = useCallback(
@@ -512,13 +521,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setSelectedModelState(modelId);
       }
 
-      flushSync(() => {
-        setCurrentConversationId(conversationId);
-      });
+      hasInitializedCoreChatMessages.current = false;
 
-      handleConversationChangeSync(conversationId);
+      setCurrentConversationId(conversationId);
 
       setIsNewConversation(false);
+
+      handleConversationChangeSync(conversationId);
     },
     []
   );
@@ -530,24 +539,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const handleChatPageOnLoad = useCallback((conversationId: string) => {
-    previousConversationIdRef.current = conversationId;
-    setCurrentConversationId(conversationId);
-    console.log("handleChatPageOnLoad", coreChat);
-    activeChatInstances.current.set(conversationId, coreChat);
-  }, []);
-
   const handleNewMessage = useCallback(
     (message: string) => {
       if (!currentConversationId) return;
-
-      setBackgroundConversationIds((prevBackgroundIds) => {
-        if (prevBackgroundIds.includes(currentConversationId)) {
-          return prevBackgroundIds;
-        }
-
-        return [...prevBackgroundIds, currentConversationId];
-      });
 
       if (coreChat) {
         if (isGuest) {
@@ -567,6 +561,48 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     [currentConversationId, coreChat, isGuest, guestStorage]
   );
 
+  const addConversation = useCallback(
+    (conversationId: string, navigateAfter: boolean = false) => {
+      previousConversationIdRef.current = conversationId;
+      setCurrentConversationId(conversationId);
+
+      setBackgroundConversationIds((prevBackgroundIds) => {
+        const updatedBackgroundIds = new Set<typeof conversationId>(
+          prevBackgroundIds
+        );
+
+        updatedBackgroundIds.add(conversationId);
+
+        const currentInstance = activeChatInstances.current.get(
+          currentConversationId
+        );
+        if (currentInstance?.status !== "streaming") {
+          activeChatInstances.current.delete(currentConversationId);
+          updatedBackgroundIds.delete(currentConversationId);
+        }
+
+        return Array.from(updatedBackgroundIds);
+      });
+
+      if (navigateAfter) {
+        navigate("/conversations");
+      }
+    },
+    [coreChat, navigate, currentConversationId]
+  );
+
+  const handleChatPageOnLoad = useCallback(
+    (conversationId: string) => {
+      addConversation(conversationId, false);
+    },
+    [addConversation]
+  );
+
+  const handleNewConversation = useCallback(() => {
+    const newConversationId = uuidv4();
+    addConversation(newConversationId, true);
+  }, [addConversation]);
+
   const value: ChatContextType = {
     ...coreChat,
     selectedModel,
@@ -579,6 +615,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setIsNewConversation,
     handleChatPageOnLoad,
     handleNewMessage,
+    handleNewConversation,
     setCurrentConversationId: setCurrentConversationIdCallback,
     isGuest,
     canSendMessage: isGuest ? guestStorage.canAddMessage() : true,
@@ -634,6 +671,7 @@ function BackgroundChatStreamer({
   const isWebSearchEnabledRef = useLatestValue(isWebSearchEnabled);
   const selectedModelRef = useLatestValue(selectedModel);
   const guestStorage = useGuestStorage();
+  const hasInitializedMessagesRef = useRef(false);
 
   const { conversation, status: conversationStatus } = useConversation({
     id: conversationId,
@@ -707,13 +745,14 @@ function BackgroundChatStreamer({
 
   useEffect(() => {
     if (
+      !hasInitializedMessagesRef.current &&
       conversationStatus === "success" &&
-      initialMessages.length > 0 &&
-      backgroundChat.messages.length !== initialMessages.length
+      initialMessages.length > 0
     ) {
       backgroundChat.setMessages(initialMessages);
+      hasInitializedMessagesRef.current = true;
     }
-  }, [initialMessages, conversationStatus, backgroundChat.messages.length]);
+  }, [initialMessages, conversationStatus, backgroundChat]);
 
   return null;
 }
@@ -746,6 +785,7 @@ export function useChatControls() {
     startNewConversationInstant: state.startNewConversationInstant,
     switchToConversation: state.switchToConversation,
     handleNewMessage: state.handleNewMessage,
+    handleNewConversation: state.handleNewConversation,
     setCurrentConversationId: state.setCurrentConversationId,
     handleChatPageOnLoad: state.handleChatPageOnLoad,
     isNewConversation: state.isNewConversation,

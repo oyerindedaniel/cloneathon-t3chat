@@ -282,7 +282,6 @@ export function useAutoScroll(options: UseAutoScrollOptions) {
   useEffect(() => {
     prevMessagesLength.current = 0;
     setTemporarySpaceHeight(0);
-    console.log("in here");
     setTimeout(() => {
       scrollToEnd();
     }, 100);

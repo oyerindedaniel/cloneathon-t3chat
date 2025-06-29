@@ -25,7 +25,7 @@ function ConnectionStatusComponent({
     if (!isConnected || isResuming) {
       setShowStatus(true);
     } else {
-      const timer = setTimeout(() => setShowStatus(false), 2000);
+      const timer = setTimeout(() => setShowStatus(false), 5000);
       return () => clearTimeout(timer);
     }
   }, [isConnected, isResuming]);
@@ -39,7 +39,7 @@ function ConnectionStatusComponent({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         className={cn(
-          "fixed top-[calc(var(--topbar-height)+1.5rem)] right-4 z-50 flex items-center gap-3",
+          "fixed top-[calc(var(--topbar-height)+1rem)] right-4 z-50 flex items-center gap-3",
           "px-4 py-3",
           "rounded-lg border shadow-lg backdrop-blur-sm",
           isConnected
@@ -68,7 +68,7 @@ function ConnectionStatusComponent({
           </span>
         </div>
 
-        {!isConnected && !isResuming && onRetry && (
+        {!isConnected && !isResuming && !!onRetry && (
           <Button
             size="sm"
             variant="outline"
@@ -83,15 +83,4 @@ function ConnectionStatusComponent({
   );
 }
 
-function areEqual(
-  prev: ConnectionStatusProps,
-  next: ConnectionStatusProps
-): boolean {
-  return (
-    prev.isConnected === next.isConnected &&
-    prev.isResuming === next.isResuming &&
-    prev.className === next.className
-  );
-}
-
-export const ConnectionStatus = memo(ConnectionStatusComponent, areEqual);
+export const ConnectionStatus = memo(ConnectionStatusComponent);

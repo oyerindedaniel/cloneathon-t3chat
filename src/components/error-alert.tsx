@@ -67,9 +67,9 @@ export const ErrorAlert = memo(function ErrorAlert({
             <X className="w-4 h-4" />
           </button>
         </AlertTitle>
-        <AlertDescription className="mb-3">{message}</AlertDescription>
-        {showResume && onResume && (
-          <div className="flex justify-end">
+        <AlertDescription className="flex justify-between gap-5">
+          {message}
+          {showResume && onResume && (
             <Button
               variant="outline"
               size="sm"
@@ -81,8 +81,8 @@ export const ErrorAlert = memo(function ErrorAlert({
               <RotateCcw className="w-3 h-3 mr-1" />
               Retry
             </Button>
-          </div>
-        )}
+          )}
+        </AlertDescription>
       </div>
     </Alert>
   );
