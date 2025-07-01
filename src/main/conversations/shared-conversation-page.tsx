@@ -175,7 +175,7 @@ export default function SharedConversationPage() {
               message={alertState.message}
               type={alertState.type}
               onResume={reload}
-              showResume={status === "error"}
+              showResume={false}
               resetTimer={resetTimer}
             />
             <AnimatePresence>

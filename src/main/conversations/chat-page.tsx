@@ -30,8 +30,12 @@ export default function ChatPage() {
   const { messages, stop, reload, status, experimental_resume, addToolResult } =
     useChatMessages();
   const { selectedModel, setSelectedModel } = useChatConfig();
-  const { isNewConversation, handleChatPageOnLoad, handleNewMessage } =
-    useChatControls();
+  const {
+    isNewConversation,
+    handleChatPageOnLoad,
+    handleNewMessage,
+    skipInitialChatLoadRef,
+  } = useChatControls();
   const {
     isConversationLoading,
     isGuest,
@@ -56,6 +60,11 @@ export default function ChatPage() {
 
   // TODO: using handleChatPageOnLoad as a dep causing infinite rerender becos coreChat is not stable
   useIsomorphicLayoutEffect(() => {
+    if (skipInitialChatLoadRef.current) {
+      skipInitialChatLoadRef.current = false;
+      return;
+    }
+
     if (id && !isNewConversation) {
       handleChatPageOnLoad(id);
     }
@@ -131,16 +140,14 @@ export default function ChatPage() {
     );
   }
 
+  const isLastMessageUsers = messages && messages.at(-1)?.role === "user";
+
   return (
     <div className="flex flex-col grid-pattern-background h-full px-8">
       <ConnectionStatus
         isConnected={isConnected}
         isResuming={isResuming}
-        onRetry={
-          messages && messages.at(-1)?.role === "user"
-            ? handleRetryConnection
-            : undefined
-        }
+        onRetry={isLastMessageUsers ? handleRetryConnection : undefined}
       />
 
       <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+4rem)]">
@@ -168,7 +175,7 @@ export default function ChatPage() {
             message={alertState.message}
             type={alertState.type}
             onResume={reload}
-            showResume={status === "error"}
+            showResume={status === "error" && isLastMessageUsers}
           />
           <AnimatePresence>
             {status === "submitted" && (

@@ -39,6 +39,7 @@ interface ChatContextType extends ChatHelpers {
   isConversationLoading: boolean;
   isConversationError: boolean;
   conversationError: unknown;
+  skipInitialChatLoadRef: React.RefObject<boolean>;
   setCurrentConversationId: (conversationId: string) => void;
   handleNewMessage: (message: string) => void;
   handleChatPageOnLoad: (conversationId: string) => void;
@@ -82,6 +83,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const isWebSearchEnabledRef = useLatestValue(isWebSearchEnabled);
   const previousConversationIdRef = useRef<string>(initialConversationId);
   const isFirstConversationTitleCreated = useRef(false);
+
+  const skipInitialChatLoadRef = useRef(false);
 
   const guestStorage = useGuestStorage();
   const isGuest = !isAuthenticated;
@@ -192,10 +195,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     string[]
   >([initialConversationId]);
 
-  const backgroundConversationIdsRef = useLatestValue(
-    backgroundConversationIds
-  );
-
   const hasInitializedCoreChatMessages = useRef(false);
 
   const initialMessagesForCoreChat = useMemo<AIMessage[]>(() => {
@@ -299,11 +298,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     },
   });
 
-  console.log("core bitch ----", {
-    currentConversationId,
-    coreChat,
-    initialConversationId,
-  });
+  // console.log("core bitch ----", {
+  //   currentConversationId,
+  //   coreChat,
+  //   initialConversationId,
+  // });
 
   useAutoResume({
     autoResume: isAuthenticated && !!currentConversationId,
@@ -324,6 +323,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (conversationStatus === "success" && coreChat.id === conversation?.id) {
+      console.log("are you entering here in the useffect");
       coreChat.setMessages(initialMessagesForCoreChat);
       hasInitializedCoreChatMessages.current = true;
     }
@@ -350,70 +350,75 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     conversation?.title,
   ]);
 
+  const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
   /**
    * Syncs background conversation IDs by tracking which chat is currently focused and which was streaming.
    * Cleans up inactive chat instances from memory when they're no longer current or backgrounded.
    */
 
-  const handleConversationChangeSync = (newConversationId: string) => {
-    const oldConversationId = previousConversationIdRef.current;
+  const handleConversationChangeSync = useCallback(
+    async (newConversationId: string) => {
+      const oldConversationId = previousConversationIdRef.current;
 
-    setBackgroundConversationIds((prevBackgroundIds) => {
-      const updatedIds = new Set<typeof currentConversationId>();
+      setBackgroundConversationIds((prevBackgroundIds) => {
+        const updatedIds = new Set<typeof currentConversationId>();
 
-      for (const id of prevBackgroundIds) {
-        const chatInstance = activeChatInstances.current.get(id);
-        if (chatInstance?.status === "streaming") {
-          updatedIds.add(id);
+        for (const id of prevBackgroundIds) {
+          const chatInstance = activeChatInstances.current.get(id);
+          if (chatInstance?.status === "streaming") {
+            updatedIds.add(id);
+          }
         }
-      }
 
-      updatedIds.add(newConversationId);
+        // retains new conversation Id
+        updatedIds.add(newConversationId);
 
-      return Array.from(updatedIds);
-    });
+        return Array.from(updatedIds);
+      });
 
-    const allExpectedActiveIds = new Set();
-    if (newConversationId) {
-      allExpectedActiveIds.add(newConversationId);
-    }
+      console.log("before suppose delete", activeChatInstances);
 
-    Array.from(activeChatInstances.current.keys()).forEach((idInMap) => {
-      if (idInMap === newConversationId) return;
+      Array.from(activeChatInstances.current.entries()).forEach(
+        ([id, instance]) => {
+          if (id === newConversationId) return;
 
-      const isExpectedBackgroundChat =
-        backgroundConversationIdsRef.current.includes(idInMap) ||
-        (idInMap === oldConversationId &&
-          activeChatInstances.current.get(oldConversationId)?.status ===
-            "streaming");
-
-      if (!isExpectedBackgroundChat) {
-        const chatInstance = activeChatInstances.current.get(idInMap);
-        if (chatInstance) {
-          activeChatInstances.current.delete(idInMap);
+          if (instance.status !== "streaming") {
+            console.log("what id", id);
+            activeChatInstances.current.delete(id);
+          }
         }
-      }
-    });
+      );
 
-    const oldInstance = oldConversationId
-      ? activeChatInstances.current.get(oldConversationId)
-      : null;
+      const oldInstance = oldConversationId
+        ? activeChatInstances.current.get(oldConversationId)
+        : null;
 
-    console.log("swap now in bitch", {
-      activeChatInstances: activeChatInstances.current,
-    });
+      console.log("swap now in bitch", {
+        activeChatInstances: activeChatInstances.current,
+        oldConversationId,
+      });
 
-    if (oldInstance?.status === "streaming") {
-      console.log("you are sti stremaing", oldInstance?.id);
-      setTimeout(() => {
+      console.log("outside", oldInstance);
+
+      previousConversationIdRef.current = newConversationId;
+
+      if (oldInstance?.status === "streaming") {
+        await delay(50);
+        console.log(
+          "you are sti stremaing",
+          oldInstance,
+          currentConversationId
+        );
+
         navigate(`/conversations/${newConversationId}`);
-      }, 50);
-    } else {
-      navigate(`/conversations/${newConversationId}`);
-    }
-
-    previousConversationIdRef.current = newConversationId;
-  };
+      } else {
+        navigate(`/conversations/${newConversationId}`);
+      }
+    },
+    [navigate, currentConversationId]
+  );
 
   const setSelectedModel = useCallback((modelId: string) => {
     setSelectedModelState(modelId);
@@ -521,9 +526,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setSelectedModelState(modelId);
       }
 
+      skipInitialChatLoadRef.current = true;
       hasInitializedCoreChatMessages.current = false;
 
-      setCurrentConversationId(conversationId);
+      flushSync(() => {
+        setCurrentConversationId(conversationId);
+      });
 
       setIsNewConversation(false);
 
@@ -566,12 +574,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       previousConversationIdRef.current = conversationId;
       setCurrentConversationId(conversationId);
 
+      console.log("are you reaching her");
+
       setBackgroundConversationIds((prevBackgroundIds) => {
         const updatedBackgroundIds = new Set<typeof conversationId>(
           prevBackgroundIds
         );
-
-        updatedBackgroundIds.add(conversationId);
 
         const currentInstance = activeChatInstances.current.get(
           currentConversationId
@@ -580,6 +588,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           activeChatInstances.current.delete(currentConversationId);
           updatedBackgroundIds.delete(currentConversationId);
         }
+
+        // retain new conversation Id
+        updatedBackgroundIds.add(conversationId);
 
         return Array.from(updatedBackgroundIds);
       });
@@ -614,6 +625,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     isNewConversation,
     setIsNewConversation,
     handleChatPageOnLoad,
+    skipInitialChatLoadRef,
     handleNewMessage,
     handleNewConversation,
     setCurrentConversationId: setCurrentConversationIdCallback,
@@ -634,12 +646,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         <BackgroundChatStreamer
           key={convId}
           conversationId={convId}
+          currentConversationId={currentConversationId}
           isWebSearchEnabled={isWebSearchEnabled}
           selectedModel={selectedModel}
           isGuest={isGuest}
-          onChatReady={(id, chatHelpers) =>
-            activeChatInstances.current.set(id, chatHelpers)
-          }
+          onChatReady={(id, chatHelpers) => {
+            activeChatInstances.current.set(id, chatHelpers);
+          }}
           onFinish={(message) => handleChatFinish(convId, message)}
           onToolCall={() => {}}
         />
@@ -651,6 +664,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
 interface BackgroundChatStreamerProps {
   conversationId: string;
+  currentConversationId: string;
   isWebSearchEnabled: boolean;
   selectedModel: string;
   isGuest: boolean;
@@ -661,6 +675,7 @@ interface BackgroundChatStreamerProps {
 
 function BackgroundChatStreamer({
   conversationId,
+  currentConversationId,
   isWebSearchEnabled,
   selectedModel,
   isGuest,
@@ -749,10 +764,16 @@ function BackgroundChatStreamer({
       conversationStatus === "success" &&
       initialMessages.length > 0
     ) {
+      console.log("in backgroundChat setmessage");
       backgroundChat.setMessages(initialMessages);
       hasInitializedMessagesRef.current = true;
     }
-  }, [initialMessages, conversationStatus, backgroundChat]);
+  }, [
+    initialMessages,
+    conversationStatus,
+    backgroundChat,
+    currentConversationId,
+  ]);
 
   return null;
 }
@@ -788,6 +809,7 @@ export function useChatControls() {
     handleNewConversation: state.handleNewConversation,
     setCurrentConversationId: state.setCurrentConversationId,
     handleChatPageOnLoad: state.handleChatPageOnLoad,
+    skipInitialChatLoadRef: state.skipInitialChatLoadRef,
     isNewConversation: state.isNewConversation,
     setIsNewConversation: state.setIsNewConversation,
   }));

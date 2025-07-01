@@ -86,16 +86,4 @@ export const ErrorAlert = memo(function ErrorAlert({
       </div>
     </Alert>
   );
-},
-areEqual);
-
-function areEqual(prev: ErrorAlertProps, next: ErrorAlertProps): boolean {
-  return (
-    prev.isOpen === next.isOpen &&
-    prev.title === next.title &&
-    prev.message === next.message &&
-    prev.type === next.type &&
-    prev.showResume === next.showResume &&
-    prev.className === next.className
-  );
-}
+});

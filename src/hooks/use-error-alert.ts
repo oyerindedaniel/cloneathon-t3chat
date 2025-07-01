@@ -40,6 +40,7 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
   const { autoHideDuration = 5000, conversationId = "" } = options;
 
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const guestStorage = useGuestStorage();
   const { isAuthenticated, user } = useAuth();
 
@@ -188,6 +189,9 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
         });
       } else if (data?.code === "UNAUTHORIZED") {
         navigate("/login");
+        setTimeout(() => {
+          showToast("Your session has expired. Please Login.", "info");
+        }, 50);
       } else {
         handleConversationLoadError();
       }
@@ -206,13 +210,11 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
       !guestStorage.getConversation(conversationId)?.messages.length
     ) {
       // navigate("/conversations");
-      // setTimeout(() => {
       showAlert({
         title: "Conversation Error",
         message: "Failed to load conversation. Please try again.",
         type: "error",
       });
-      // }, 150);
     }
   }, [conversationId, isGuest, guestStorage, navigate]);
 
