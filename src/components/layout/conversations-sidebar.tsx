@@ -229,9 +229,8 @@ export function ConversationsSidebar() {
                             onClick={() =>
                               handleConversationClick(conversation.id)
                             }
-                            tooltip={conversation.title}
                             className={cn(
-                              "relative font-sans text-sm w-full justify-start pr-8",
+                              "relative font-sans text-sm w-full justify-start pr-8 hover:bg-surface-secondary",
                               currentId === conversation.id &&
                                 "bg-surface-secondary",
                               editingId === conversation.id &&

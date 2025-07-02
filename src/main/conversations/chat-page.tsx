@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "react-router-dom";
-import { useCallback } from "react";
+import { Fragment, useCallback } from "react";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatInput } from "@/components/chat/chat-input";
 import { MessageSkeleton } from "@/components/chat/message-skeleton";
@@ -73,7 +73,7 @@ export default function ChatPage() {
   const handleMessageSubmit = useCallback(
     (message: string) => {
       if (!message.trim() || status === "streaming") return;
-
+      console.log("message--", message);
       try {
         handleNewMessage(message);
       } catch (error) {
@@ -142,6 +142,13 @@ export default function ChatPage() {
 
   const isLastMessageUsers = messages && messages.at(-1)?.role === "user";
 
+  console.log({ messages });
+
+  const activeStreamingStatus =
+    status === "streaming" || status === "submitted";
+
+  console.log(" activeStreamingStatus", activeStreamingStatus);
+
   return (
     <div className="flex flex-col grid-pattern-background h-full px-8">
       <ConnectionStatus
@@ -153,30 +160,34 @@ export default function ChatPage() {
       <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+4rem)]">
         <div className="flex flex-col gap-12">
           {messages.map((message, index) => (
-            <div
-              key={message.id}
-              ref={index === messages.length - 1 ? lastMessageRef : undefined}
-              data-role={message.role}
-            >
-              <ChatMessage
-                status={status}
-                message={message}
-                currentModel={selectedModel}
-                onRetry={handleReload}
-                onModelChange={setSelectedModel}
-                addToolResult={addToolResult}
-              />
+            <div key={message.id}>
+              <div
+                ref={index === messages.length - 1 ? lastMessageRef : undefined}
+                data-role={message.role}
+              >
+                <ChatMessage
+                  status={status}
+                  message={message}
+                  currentModel={selectedModel}
+                  onRetry={handleReload}
+                  onModelChange={setSelectedModel}
+                  addToolResult={addToolResult}
+                />
+              </div>
+              {index === messages.length - 1 && !activeStreamingStatus && (
+                <ErrorAlert
+                  isOpen={alertState.isOpen}
+                  onClose={hideAlert}
+                  title={alertState.title}
+                  message={alertState.message}
+                  type={alertState.type}
+                  onResume={reload}
+                  showResume={status === "error" && isLastMessageUsers}
+                />
+              )}
             </div>
           ))}
-          <ErrorAlert
-            isOpen={alertState.isOpen}
-            onClose={hideAlert}
-            title={alertState.title}
-            message={alertState.message}
-            type={alertState.type}
-            onResume={reload}
-            showResume={status === "error" && isLastMessageUsers}
-          />
+
           <AnimatePresence>
             {status === "submitted" && (
               <motion.div
@@ -210,7 +221,7 @@ export default function ChatPage() {
           onImageAttach={handleImageAttach}
           selectedModel={selectedModel}
           onModelChange={setSelectedModel}
-          disabled={status === "streaming" || status === "submitted"}
+          disabled={activeStreamingStatus}
           className="flex-1"
           onStop={handleStop}
           isGuest={isGuest}

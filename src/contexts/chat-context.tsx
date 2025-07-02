@@ -4,6 +4,7 @@ import React, {
   useRef,
   useEffect,
   useMemo,
+  RefObject,
 } from "react";
 import { createContext, useContextSelector } from "use-context-selector";
 import { useChat as useAIChat } from "@ai-sdk/react";
@@ -16,7 +17,6 @@ import { useNavigate } from "react-router-dom";
 import { Message as AIMessage } from "ai";
 import { v4 as uuidv4 } from "uuid";
 import { flushSync } from "react-dom";
-import { UseChatHelpers } from "@ai-sdk/react";
 import { useAutoResume } from "@/hooks/use-auto-resume";
 import { useLatestValue } from "@/hooks/use-latest-value";
 import { useGuestStorage } from "@/contexts/guest-storage-context";
@@ -29,6 +29,7 @@ import type {
   LocationToolStatus,
   LocationToolCall,
 } from "./types";
+import { DEFAULT_CHAT_HELPERS } from "./constants";
 
 interface ChatContextType extends ChatHelpers {
   selectedModel: string;
@@ -77,12 +78,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const previousTitleRef = useRef<string | null>(null);
   const [selectedModel, setSelectedModelState] = useState(DEFAULT_MODEL.id);
-  const selectedModelRef = useLatestValue(selectedModel);
   const [isNewConversation, setIsNewConversation] = useState(false);
   const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
-  const isWebSearchEnabledRef = useLatestValue(isWebSearchEnabled);
-  const previousConversationIdRef = useRef<string>(initialConversationId);
-  const isFirstConversationTitleCreated = useRef(false);
 
   const skipInitialChatLoadRef = useRef(false);
 
@@ -92,59 +89,93 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const utils = api.useUtils();
   const updateTitle = api.conversations.updateTitle.useMutation();
 
-  const activeChatInstances = useRef<Map<string, UseChatHelpers>>(new Map());
+  const chatInstances = useRef<Map<string, ChatHelpers>>(new Map());
+
+  const {
+    isLoading: conversationLoading,
+    isError: isConversationError,
+    error: conversationError,
+  } = useConversation({ id: currentConversationId, isNewConversation });
+
+  const [activeConversationIds, setActiveConversationIds] = useState<
+    Set<string>
+  >(new Set([initialConversationId]));
+
+  const [currentChatData, setCurrentChatData] =
+    useState<ChatHelpers>(DEFAULT_CHAT_HELPERS);
 
   const generateTitle = useCallback(
-    async (convId: string): Promise<string | null> => {
-      try {
-        const chatInstance = activeChatInstances.current.get(convId);
-        const messagesForTitle = chatInstance?.messages || [];
+    async (
+      {
+        convId,
+        isTitleCreated,
+      }: {
+        convId: string;
+        isTitleCreated: RefObject<boolean>;
+      },
+      retries = 3
+    ): Promise<string | null> => {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const chatInstance = chatInstances.current.get(convId);
+          const messagesForTitle = chatInstance?.messages || [];
 
-        if (messagesForTitle.length === 0) {
-          console.warn(`Messages sent to generate-title for ${convId}: 0 []`);
-          return null;
-        }
+          if (messagesForTitle.length === 0) {
+            console.warn(`Messages sent to generate-title for ${convId}: 0 []`);
+            return null;
+          }
 
-        const response = await fetch("/api/generate-title", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ messages: messagesForTitle }),
-        });
+          const response = await fetch("/api/generate-title", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ messages: messagesForTitle }),
+          });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(
-            "Title generation failed with HTTP error:",
-            response.status,
-            errorText
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(
+              "Title generation failed with HTTP error:",
+              response.status,
+              errorText
+            );
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const title = await response.text();
+          console.log("in generate tit", {
+            convId,
+            currentConversation: currentConversationIdRef.current,
+          });
+          isTitleCreated.current = true;
+          return title;
+        } catch (error) {
+          if (i === retries - 1) throw error;
+          await new Promise((resolve) =>
+            setTimeout(resolve, 1000 * Math.pow(2, i))
           );
-          throw new Error(`HTTP error! status: ${response.status}`);
         }
-
-        const title = await response.text();
-        console.log("in generate tit", {
-          convId,
-          currentConversation: currentConversationIdRef.current,
-        });
-        if (convId === currentConversationIdRef.current) {
-          isFirstConversationTitleCreated.current = true;
-        }
-        return title;
-      } catch (error) {
-        console.error(`Title generation failed for ${convId}:`, error);
-        return null;
       }
+      return null;
     },
     [currentConversationIdRef]
   );
 
   const updateConversationTitle = useCallback(
-    async (convId: string) => {
+    async ({
+      convId,
+      isTitleCreated,
+    }: {
+      convId: string;
+      isTitleCreated: RefObject<boolean>;
+    }) => {
       if (!convId) return;
 
-      const newTitle = await generateTitle(convId);
+      const newTitle = await generateTitle({
+        convId,
+        isTitleCreated,
+      });
 
       try {
         if (isGuest) {
@@ -183,36 +214,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     [generateTitle, isGuest, guestStorage, updateTitle, utils, showToast]
   );
 
-  const {
-    conversation,
-    isLoading: conversationLoading,
-    isError: isConversationError,
-    error: conversationError,
-    status: conversationStatus,
-  } = useConversation({ id: currentConversationId, isNewConversation });
-
-  const [backgroundConversationIds, setBackgroundConversationIds] = useState<
-    string[]
-  >([initialConversationId]);
-
-  const hasInitializedCoreChatMessages = useRef(false);
-
-  const initialMessagesForCoreChat = useMemo<AIMessage[]>(() => {
-    if (currentConversationId) {
-      if (isGuest) {
-        const guestConversation = guestStorage.getConversation(
-          currentConversationId
-        );
-        return guestConversation?.messages || [];
-      } else if (conversation?.messages) {
-        return toAIMessages(conversation.messages);
-      }
-    }
-    return [];
-  }, [currentConversationId, isGuest, guestStorage, conversation?.messages]);
-
   const handleChatFinish = useCallback(
-    async (convId: string, message: Message) => {
+    async ({
+      convId,
+      message,
+      isTitleCreated,
+    }: {
+      convId: string;
+      message: Message;
+      isTitleCreated: RefObject<boolean>;
+    }) => {
       if (convId) {
         if (isGuest) {
           guestStorage.addMessage(convId, {
@@ -228,197 +239,46 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           } as AIMessage);
         }
 
-        if (!isFirstConversationTitleCreated.current) {
-          await updateConversationTitle(convId);
+        if (!isTitleCreated.current) {
+          await updateConversationTitle({ convId, isTitleCreated });
         }
       }
     },
     [isGuest, guestStorage, updateConversationTitle]
   );
 
-  const coreChat = useAIChat({
-    api: "/api/chat",
-    id: currentConversationId || undefined,
-    initialMessages: initialMessagesForCoreChat,
-    sendExtraMessageFields: true,
-    generateId: messageIdGenerator,
-    maxSteps: 5,
-    experimental_prepareRequestBody: ({ messages }) => {
-      return {
-        message: messages.at(-1),
-        id: currentConversationIdRef.current,
-        isWebSearchEnabled: isWebSearchEnabledRef.current,
-        modelId: selectedModelRef.current,
-        userLocation: {
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        },
-      };
-    },
-    onResponse: async (response) => {
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(
-          "Chat API error in core chat context:",
-          response.status,
-          errorText
-        );
-        // throw new Error(`Chat API error: ${response.status}`);
+  const cleanupInactiveConversations = useCallback(() => {
+    const instancesToRemove: string[] = [];
+
+    chatInstances.current.forEach((chatInstance, convId) => {
+      const isInactive = !activeConversationIds.has(convId);
+      const isNotStreaming = chatInstance.status !== "streaming";
+      const isNotCurrent = convId !== currentConversationId;
+
+      if (isInactive && isNotStreaming && isNotCurrent) {
+        instancesToRemove.push(convId);
       }
-    },
-    onFinish: async (message) => {
-      const convId = currentConversationIdRef.current;
-      if (convId) {
-        await handleChatFinish(convId, message);
-      }
-    },
-    onToolCall: async ({ toolCall }) => {
-      const convId = currentConversationIdRef.current;
-      if (convId) {
-        coreChat.setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            id: messageIdGenerator(),
-            role: "assistant",
-            content: "",
-            parts: {
-              type: "tool-invocation",
-              toolInvocation: {
-                toolCallId: toolCall.toolCallId,
-                toolName: toolCall.toolName,
-                state: "awaiting_user_input" as LocationToolStatus,
-                args: (toolCall as LocationToolCall).args.message,
-              },
-            },
-          } as unknown as AIMessage,
-        ]);
-      }
-    },
-    onError: (error) => {
-      console.error("Core chat error:", error);
-    },
-  });
+    });
 
-  // console.log("core bitch ----", {
-  //   currentConversationId,
-  //   coreChat,
-  //   initialConversationId,
-  // });
+    instancesToRemove.forEach((convId) => {
+      chatInstances.current.delete(convId);
+    });
 
-  useAutoResume({
-    autoResume: isAuthenticated && !!currentConversationId,
-    initialMessages: coreChat.messages,
-    experimental_resume: coreChat.experimental_resume,
-    data: coreChat.data,
-    setMessages: coreChat.setMessages,
-  });
-
-  // Persist fetch conversations for authenticated user
-  useEffect(() => {
-    if (
-      hasInitializedCoreChatMessages.current ||
-      isNewConversation ||
-      initialMessagesForCoreChat.length === 0
-    ) {
-      return;
-    }
-
-    if (conversationStatus === "success" && coreChat.id === conversation?.id) {
-      console.log("are you entering here in the useffect");
-      coreChat.setMessages(initialMessagesForCoreChat);
-      hasInitializedCoreChatMessages.current = true;
-    }
-  }, [
-    isNewConversation,
-    initialMessagesForCoreChat,
-    conversationStatus,
-    coreChat,
-    conversation?.id,
-  ]);
+    setActiveConversationIds((prevIds) => {
+      const updated = new Set(prevIds);
+      instancesToRemove.forEach((id) => {
+        if (id !== currentConversationId) {
+          updated.delete(id);
+        }
+      });
+      return updated;
+    });
+  }, [activeConversationIds, currentConversationId]);
 
   useEffect(() => {
-    if (isNewConversation) return;
-
-    const hasTitle = isGuest
-      ? !!guestStorage.getConversation(currentConversationId)?.title
-      : !!conversation?.title;
-    isFirstConversationTitleCreated.current = hasTitle;
-  }, [
-    isNewConversation,
-    isGuest,
-    currentConversationId,
-    guestStorage,
-    conversation?.title,
-  ]);
-
-  const delay = (ms: number) =>
-    new Promise((resolve) => setTimeout(resolve, ms));
-
-  /**
-   * Syncs background conversation IDs by tracking which chat is currently focused and which was streaming.
-   * Cleans up inactive chat instances from memory when they're no longer current or backgrounded.
-   */
-
-  const handleConversationChangeSync = useCallback(
-    async (newConversationId: string) => {
-      const oldConversationId = previousConversationIdRef.current;
-
-      setBackgroundConversationIds((prevBackgroundIds) => {
-        const updatedIds = new Set<typeof currentConversationId>();
-
-        for (const id of prevBackgroundIds) {
-          const chatInstance = activeChatInstances.current.get(id);
-          if (chatInstance?.status === "streaming") {
-            updatedIds.add(id);
-          }
-        }
-
-        // retains new conversation Id
-        updatedIds.add(newConversationId);
-
-        return Array.from(updatedIds);
-      });
-
-      console.log("before suppose delete", activeChatInstances);
-
-      Array.from(activeChatInstances.current.entries()).forEach(
-        ([id, instance]) => {
-          if (id === newConversationId) return;
-
-          if (instance.status !== "streaming") {
-            console.log("what id", id);
-            activeChatInstances.current.delete(id);
-          }
-        }
-      );
-
-      const oldInstance = oldConversationId
-        ? activeChatInstances.current.get(oldConversationId)
-        : null;
-
-      console.log("swap now in bitch", {
-        activeChatInstances: activeChatInstances.current,
-        oldConversationId,
-      });
-
-      console.log("outside", oldInstance);
-
-      previousConversationIdRef.current = newConversationId;
-
-      if (oldInstance?.status === "streaming") {
-        await delay(50);
-        console.log(
-          "you are sti stremaing",
-          oldInstance,
-          currentConversationId
-        );
-
-        navigate(`/conversations/${newConversationId}`);
-      } else {
-        navigate(`/conversations/${newConversationId}`);
-      }
-    },
-    [navigate, currentConversationId]
-  );
+    const interval = setInterval(cleanupInactiveConversations, 60000);
+    return () => clearInterval(interval);
+  }, [cleanupInactiveConversations]);
 
   const setSelectedModel = useCallback((modelId: string) => {
     setSelectedModelState(modelId);
@@ -427,7 +287,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const startNewConversationInstant = useCallback(
     (message: string, modelId?: string): string => {
       const effectiveModelId = modelId || selectedModel;
-      const conversationId = currentConversationId;
+
+      const conversationId = currentConversationIdRef.current;
 
       const initialTitle =
         message.length > 50 ? `${message.slice(0, 47)}...` : message;
@@ -476,48 +337,54 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           utils.conversations.getAll.setInfiniteData(
             { limit: CONVERSATION_QUERY_LIMIT },
             (old) => {
-              if (!old) {
-                const newConversationPage = {
-                  conversations: [newConversation],
-                  nextCursor: undefined,
-                };
+              if (!old)
                 return {
-                  pages: [newConversationPage],
+                  pages: [
+                    { conversations: [newConversation], nextCursor: undefined },
+                  ],
                   pageParams: [null],
                 };
-              }
-
-              const newConversationPage = {
-                conversations: [newConversation],
-                nextCursor: undefined,
-              };
-
+              const [firstPage, ...rest] = old.pages;
               return {
                 ...old,
-                pages: [newConversationPage, ...old.pages],
+                pages: [
+                  {
+                    ...firstPage,
+                    conversations: [
+                      newConversation,
+                      ...firstPage.conversations,
+                    ],
+                  },
+                  ...rest,
+                ],
               };
             }
           );
         }
 
-        coreChat.setMessages([]);
-        coreChat.append({ role: "user", content: message });
+        const chatInstance = chatInstances.current.get(currentConversationId);
 
+        if (chatInstance) {
+          chatInstance.setMessages([]);
+          chatInstance.append({ role: "user", content: message });
+        }
         return conversationId;
       } catch {
         return "";
       }
     },
-    [
-      selectedModel,
-      navigate,
-      isGuest,
-      guestStorage,
-      userId,
-      utils,
-      coreChat,
-      currentConversationId,
-    ]
+    [selectedModel, navigate, isGuest, guestStorage, userId]
+  );
+
+  const handleChatUpdate = useCallback(
+    (conversationId: string, chatHelpers: ChatHelpers) => {
+      chatInstances.current.set(conversationId, chatHelpers);
+
+      if (conversationId === currentConversationIdRef.current) {
+        setCurrentChatData(chatHelpers);
+      }
+    },
+    [currentConversationIdRef]
   );
 
   const switchToConversation = useCallback(
@@ -527,15 +394,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
 
       skipInitialChatLoadRef.current = true;
-      hasInitializedCoreChatMessages.current = false;
+
+      cleanupInactiveConversations();
 
       flushSync(() => {
         setCurrentConversationId(conversationId);
+        setActiveConversationIds((prev) => new Set([...prev, conversationId]));
       });
 
       setIsNewConversation(false);
-
-      handleConversationChangeSync(conversationId);
+      navigate(`/conversations/${conversationId}`);
     },
     []
   );
@@ -549,73 +417,43 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const handleNewMessage = useCallback(
     (message: string) => {
-      if (!currentConversationId) return;
+      const currentConvId = currentConversationIdRef.current;
+      if (!currentConvId || (isGuest && !guestStorage.canAddMessage())) {
+        return;
+      }
 
-      if (coreChat) {
-        if (isGuest) {
-          guestStorage.addMessage(currentConversationId, {
-            id: messageIdGenerator(),
-            role: "user",
-            content: message,
-            createdAt: new Date(),
-          });
-        }
-        coreChat.append({
+      const chatInstance = chatInstances.current.get(currentConvId);
+
+      if (chatInstance) {
+        chatInstance.append({
           role: "user",
           content: message,
         });
       }
     },
-    [currentConversationId, coreChat, isGuest, guestStorage]
+    [isGuest, guestStorage]
   );
 
-  const addConversation = useCallback(
-    (conversationId: string, navigateAfter: boolean = false) => {
-      previousConversationIdRef.current = conversationId;
-      setCurrentConversationId(conversationId);
-
-      console.log("are you reaching her");
-
-      setBackgroundConversationIds((prevBackgroundIds) => {
-        const updatedBackgroundIds = new Set<typeof conversationId>(
-          prevBackgroundIds
-        );
-
-        const currentInstance = activeChatInstances.current.get(
-          currentConversationId
-        );
-        if (currentInstance?.status !== "streaming") {
-          activeChatInstances.current.delete(currentConversationId);
-          updatedBackgroundIds.delete(currentConversationId);
-        }
-
-        // retain new conversation Id
-        updatedBackgroundIds.add(conversationId);
-
-        return Array.from(updatedBackgroundIds);
-      });
-
-      if (navigateAfter) {
-        navigate("/conversations");
-      }
-    },
-    [coreChat, navigate, currentConversationId]
-  );
-
-  const handleChatPageOnLoad = useCallback(
-    (conversationId: string) => {
-      addConversation(conversationId, false);
-    },
-    [addConversation]
-  );
+  const handleChatPageOnLoad = useCallback((conversationId: string) => {
+    setCurrentConversationId(conversationId);
+    setActiveConversationIds((prev) => new Set([...prev, conversationId]));
+  }, []);
 
   const handleNewConversation = useCallback(() => {
     const newConversationId = uuidv4();
-    addConversation(newConversationId, true);
-  }, [addConversation]);
+    setCurrentConversationId(newConversationId);
+    setActiveConversationIds((prev) => new Set([...prev, newConversationId]));
+    navigate("/conversations");
+  }, [navigate]);
+
+  console.log({
+    currentChatData,
+    currentConversationId,
+    activeConversationIds,
+  });
 
   const value: ChatContextType = {
-    ...coreChat,
+    ...currentChatData,
     selectedModel,
     setSelectedModel,
     currentConversationId,
@@ -642,18 +480,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ChatContext.Provider value={value}>
-      {backgroundConversationIds.map((convId) => (
-        <BackgroundChatStreamer
+      {Array.from(activeConversationIds).map((convId) => (
+        <ChatStreamer
           key={convId}
           conversationId={convId}
           currentConversationId={currentConversationId}
           isWebSearchEnabled={isWebSearchEnabled}
           selectedModel={selectedModel}
           isGuest={isGuest}
-          onChatReady={(id, chatHelpers) => {
-            activeChatInstances.current.set(id, chatHelpers);
-          }}
-          onFinish={(message) => handleChatFinish(convId, message)}
+          onChatUpdate={handleChatUpdate}
+          onFinish={({ message, isTitleCreated }) =>
+            handleChatFinish({ convId, message, isTitleCreated })
+          }
           onToolCall={() => {}}
         />
       ))}
@@ -662,31 +500,37 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-interface BackgroundChatStreamerProps {
+interface ChatStreamerProps {
   conversationId: string;
   currentConversationId: string;
   isWebSearchEnabled: boolean;
   selectedModel: string;
   isGuest: boolean;
-  onChatReady: (conversationId: string, chatHelpers: UseChatHelpers) => void;
-  onFinish: (message: Message) => void;
+  onChatUpdate: (conversationId: string, chatHelpers: ChatHelpers) => void;
+  onFinish: ({
+    message,
+  }: {
+    message: Message;
+    isTitleCreated: RefObject<boolean>;
+  }) => void;
   onToolCall: (toolCall: LocationToolCall) => void;
 }
 
-function BackgroundChatStreamer({
+function ChatStreamer({
   conversationId,
   currentConversationId,
   isWebSearchEnabled,
   selectedModel,
   isGuest,
-  onChatReady,
+  onChatUpdate,
   onFinish,
   onToolCall,
-}: BackgroundChatStreamerProps) {
+}: ChatStreamerProps) {
   const isWebSearchEnabledRef = useLatestValue(isWebSearchEnabled);
   const selectedModelRef = useLatestValue(selectedModel);
   const guestStorage = useGuestStorage();
   const hasInitializedMessagesRef = useRef(false);
+  const isTitleCreated = useRef(false);
 
   const { conversation, status: conversationStatus } = useConversation({
     id: conversationId,
@@ -694,16 +538,29 @@ function BackgroundChatStreamer({
   });
 
   const initialMessages = useMemo<AIMessage[]>(() => {
+    if (hasInitializedMessagesRef.current) return [];
+
     if (isGuest) {
       const guestConversation = guestStorage.getConversation(conversationId);
-      return guestConversation?.messages || [];
-    } else if (conversation?.messages) {
-      return toAIMessages(conversation.messages);
+      const messages = guestConversation?.messages || [];
+      hasInitializedMessagesRef.current = true;
+      return messages;
     }
-    return [];
-  }, [conversationId, isGuest, guestStorage, conversation?.messages]);
 
-  const backgroundChat = useAIChat({
+    if (!conversation) {
+      return [];
+    }
+
+    if (conversation.messages) {
+      const messages = toAIMessages(conversation.messages);
+      hasInitializedMessagesRef.current = true;
+      return messages;
+    }
+
+    return [];
+  }, [conversationId, isGuest, guestStorage, conversation]);
+
+  const chat = useAIChat({
     api: "/api/chat",
     id: conversationId,
     initialMessages: initialMessages,
@@ -732,10 +589,26 @@ function BackgroundChatStreamer({
       }
     },
     onFinish: (message) => {
-      onFinish(message);
+      onFinish({ message, isTitleCreated });
     },
     onToolCall: ({ toolCall }) => {
-      onToolCall(toolCall as LocationToolCall);
+      chat.setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          id: messageIdGenerator(),
+          role: "assistant",
+          content: "",
+          parts: {
+            type: "tool-invocation",
+            toolInvocation: {
+              toolCallId: toolCall.toolCallId,
+              toolName: toolCall.toolName,
+              state: "awaiting_user_input" as LocationToolStatus,
+              args: (toolCall as LocationToolCall).args.message,
+            },
+          },
+        } as unknown as AIMessage,
+      ]);
     },
     onError: (error) => {
       console.error(
@@ -747,16 +620,32 @@ function BackgroundChatStreamer({
 
   useAutoResume({
     autoResume: !isGuest && !!conversationId,
-    initialMessages: backgroundChat.messages,
-    experimental_resume: backgroundChat.experimental_resume,
-    data: backgroundChat.data,
-    setMessages: backgroundChat.setMessages,
+    initialMessages: chat.messages,
+    experimental_resume: chat.experimental_resume,
+    data: chat.data,
+    setMessages: chat.setMessages,
   });
 
   useEffect(() => {
-    onChatReady(conversationId, backgroundChat);
+    onChatUpdate(conversationId, chat);
     return () => {};
-  }, [conversationId, backgroundChat, onChatReady]);
+  }, [
+    conversationId,
+    chat.messages,
+    chat.input,
+    chat.status,
+    chat.error,
+    chat.data,
+    onChatUpdate,
+    currentConversationId,
+  ]);
+
+  useEffect(() => {
+    const hasTitle = isGuest
+      ? !!guestStorage.getConversation(conversationId)?.title
+      : !!conversation?.title;
+    isTitleCreated.current = hasTitle;
+  }, [isGuest, conversationId, guestStorage, conversation?.title]);
 
   useEffect(() => {
     if (
@@ -764,16 +653,10 @@ function BackgroundChatStreamer({
       conversationStatus === "success" &&
       initialMessages.length > 0
     ) {
-      console.log("in backgroundChat setmessage");
-      backgroundChat.setMessages(initialMessages);
+      chat.setMessages(initialMessages);
       hasInitializedMessagesRef.current = true;
     }
-  }, [
-    initialMessages,
-    conversationStatus,
-    backgroundChat,
-    currentConversationId,
-  ]);
+  }, [initialMessages, conversationStatus, chat, currentConversationId]);
 
   return null;
 }

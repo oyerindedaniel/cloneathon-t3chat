@@ -48,7 +48,7 @@ export const ErrorAlert = memo(function ErrorAlert({
       className={cn(
         "shadow-lg",
         variant === "default"
-          ? "w-full mt-5"
+          ? "w-full mt-3"
           : "fixed top-[calc(var(--topbar-height)+1.5rem)] right-4 z-50 max-w-md animate-in slide-in-from-top-2 fade-in-0",
         className
       )}
