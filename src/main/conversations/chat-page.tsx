@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "react-router-dom";
-import { Fragment, useCallback } from "react";
+import { useCallback } from "react";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatInput } from "@/components/chat/chat-input";
 import { MessageSkeleton } from "@/components/chat/message-skeleton";
@@ -20,11 +20,12 @@ import { TypingDots } from "@/components/typing-dots";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-Isomorphic-layout-effect";
+import { useNavigate } from "react-router-dom";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
   const { open } = useSidebar();
-
+  const navigate = useNavigate();
   const state = open ? "expanded" : "collapsed";
 
   const { messages, stop, reload, status, experimental_resume, addToolResult } =
@@ -73,7 +74,7 @@ export default function ChatPage() {
   const handleMessageSubmit = useCallback(
     (message: string) => {
       if (!message.trim() || status === "streaming") return;
-      console.log("message--", message);
+
       try {
         handleNewMessage(message);
       } catch (error) {
@@ -142,12 +143,8 @@ export default function ChatPage() {
 
   const isLastMessageUsers = messages && messages.at(-1)?.role === "user";
 
-  console.log({ messages });
-
   const activeStreamingStatus =
     status === "streaming" || status === "submitted";
-
-  console.log(" activeStreamingStatus", activeStreamingStatus);
 
   return (
     <div className="flex flex-col grid-pattern-background h-full px-8">
@@ -174,15 +171,22 @@ export default function ChatPage() {
                   addToolResult={addToolResult}
                 />
               </div>
-              {index === messages.length - 1 && !activeStreamingStatus && (
+              {index === messages.length - 1 && (
                 <ErrorAlert
-                  isOpen={alertState.isOpen}
-                  onClose={hideAlert}
+                  isOpen={
+                    alertState.isOpen &&
+                    !activeStreamingStatus &&
+                    status === "error"
+                  }
+                  onClose={async () => {
+                    hideAlert();
+                    await reload();
+                  }}
                   title={alertState.title}
                   message={alertState.message}
                   type={alertState.type}
                   onResume={reload}
-                  showResume={status === "error" && isLastMessageUsers}
+                  showResume
                 />
               )}
             </div>
@@ -216,6 +220,17 @@ export default function ChatPage() {
         data-state={state}
         className="max-md:max-w-2xl max-md:w-full data-[state=collapsed]:!max-w-2xl data-[state=collapsed]:!w-full data-[state=collapsed]:!left-2/4 md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2"
       >
+        <ErrorAlert
+          className="mb-3"
+          isOpen={alertState.isOpen && status !== "error"}
+          onClose={() => {
+            hideAlert();
+            navigate("/conversations");
+          }}
+          title={alertState.title}
+          message={alertState.message}
+          type={alertState.type}
+        />
         <ChatInput
           onSubmit={handleMessageSubmit}
           onImageAttach={handleImageAttach}

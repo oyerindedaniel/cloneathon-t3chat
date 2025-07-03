@@ -42,7 +42,7 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const guestStorage = useGuestStorage();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const isGuest = !isAuthenticated;
   const { openSettings } = useSettings();

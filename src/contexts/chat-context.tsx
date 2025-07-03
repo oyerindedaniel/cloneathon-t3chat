@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useMemo,
   RefObject,
+  startTransition,
 } from "react";
 import { createContext, useContextSelector } from "use-context-selector";
 import { useChat as useAIChat } from "@ai-sdk/react";
@@ -144,10 +145,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           }
 
           const title = await response.text();
-          console.log("in generate tit", {
-            convId,
-            currentConversation: currentConversationIdRef.current,
-          });
+
           isTitleCreated.current = true;
           return title;
         } catch (error) {
@@ -159,7 +157,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
       return null;
     },
-    [currentConversationIdRef]
+    []
   );
 
   const updateConversationTitle = useCallback(
@@ -172,12 +170,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }) => {
       if (!convId) return;
 
-      const newTitle = await generateTitle({
-        convId,
-        isTitleCreated,
-      });
-
       try {
+        const newTitle = await generateTitle({
+          convId,
+          isTitleCreated,
+        });
+
         if (isGuest) {
           if (newTitle) {
             guestStorage.updateConversation(convId, {
@@ -293,6 +291,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const initialTitle =
         message.length > 50 ? `${message.slice(0, 47)}...` : message;
 
+      skipInitialChatLoadRef.current = true;
+
       try {
         flushSync(() => {
           setIsNewConversation(true);
@@ -381,10 +381,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       chatInstances.current.set(conversationId, chatHelpers);
 
       if (conversationId === currentConversationIdRef.current) {
-        setCurrentChatData(chatHelpers);
+        startTransition(() => setCurrentChatData(chatHelpers));
       }
     },
-    [currentConversationIdRef]
+    []
   );
 
   const switchToConversation = useCallback(
@@ -425,6 +425,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const chatInstance = chatInstances.current.get(currentConvId);
 
       if (chatInstance) {
+        if (isGuest) {
+          guestStorage.addMessage(currentConvId, {
+            id: messageIdGenerator(),
+            role: "user",
+            content: message,
+            createdAt: new Date(),
+          });
+        }
         chatInstance.append({
           role: "user",
           content: message,
@@ -446,11 +454,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     navigate("/conversations");
   }, [navigate]);
 
-  console.log({
-    currentChatData,
-    currentConversationId,
-    activeConversationIds,
-  });
+  // console.log({
+  //   currentChatData,
+  //   currentConversationId,
+  //   activeConversationIds,
+  // });
 
   const value: ChatContextType = {
     ...currentChatData,
@@ -488,6 +496,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           isWebSearchEnabled={isWebSearchEnabled}
           selectedModel={selectedModel}
           isGuest={isGuest}
+          isNewConversation={isNewConversation}
           onChatUpdate={handleChatUpdate}
           onFinish={({ message, isTitleCreated }) =>
             handleChatFinish({ convId, message, isTitleCreated })
@@ -506,6 +515,7 @@ interface ChatStreamerProps {
   isWebSearchEnabled: boolean;
   selectedModel: string;
   isGuest: boolean;
+  isNewConversation: boolean;
   onChatUpdate: (conversationId: string, chatHelpers: ChatHelpers) => void;
   onFinish: ({
     message,
@@ -522,6 +532,7 @@ function ChatStreamer({
   isWebSearchEnabled,
   selectedModel,
   isGuest,
+  isNewConversation,
   onChatUpdate,
   onFinish,
   onToolCall,
@@ -531,34 +542,37 @@ function ChatStreamer({
   const guestStorage = useGuestStorage();
   const hasInitializedMessagesRef = useRef(false);
   const isTitleCreated = useRef(false);
+  const initialMessagesRef = useRef<AIMessage[] | null>(null);
 
-  const { conversation, status: conversationStatus } = useConversation({
+  const { conversation } = useConversation({
     id: conversationId,
     isNewConversation: false,
   });
 
   const initialMessages = useMemo<AIMessage[]>(() => {
-    if (hasInitializedMessagesRef.current) return [];
-
-    if (isGuest) {
-      const guestConversation = guestStorage.getConversation(conversationId);
-      const messages = guestConversation?.messages || [];
-      hasInitializedMessagesRef.current = true;
-      return messages;
+    if (hasInitializedMessagesRef.current && initialMessagesRef.current) {
+      return initialMessagesRef.current;
     }
 
-    if (!conversation) {
+    if (!isGuest && !conversation) {
       return [];
     }
 
-    if (conversation.messages) {
-      const messages = toAIMessages(conversation.messages);
-      hasInitializedMessagesRef.current = true;
-      return messages;
+    let messages: AIMessage[] = [];
+
+    if (isGuest) {
+      const guestConversation = guestStorage.getConversation(conversationId);
+      messages = guestConversation?.messages || [];
+    } else if (conversation?.messages) {
+      messages = toAIMessages(conversation.messages);
     }
 
-    return [];
-  }, [conversationId, isGuest, guestStorage, conversation]);
+    hasInitializedMessagesRef.current = true;
+    initialMessagesRef.current = messages;
+    isTitleCreated.current = !!messages.length;
+
+    return messages;
+  }, [conversationId, isGuest, guestStorage, conversation, isNewConversation]);
 
   const chat = useAIChat({
     api: "/api/chat",
@@ -611,10 +625,7 @@ function ChatStreamer({
       ]);
     },
     onError: (error) => {
-      console.error(
-        `Background chat error for conversation ${conversationId}:`,
-        error
-      );
+      console.error(`chat error for conversation ${conversationId}:`, error);
     },
   });
 
@@ -639,24 +650,6 @@ function ChatStreamer({
     onChatUpdate,
     currentConversationId,
   ]);
-
-  useEffect(() => {
-    const hasTitle = isGuest
-      ? !!guestStorage.getConversation(conversationId)?.title
-      : !!conversation?.title;
-    isTitleCreated.current = hasTitle;
-  }, [isGuest, conversationId, guestStorage, conversation?.title]);
-
-  useEffect(() => {
-    if (
-      !hasInitializedMessagesRef.current &&
-      conversationStatus === "success" &&
-      initialMessages.length > 0
-    ) {
-      chat.setMessages(initialMessages);
-      hasInitializedMessagesRef.current = true;
-    }
-  }, [initialMessages, conversationStatus, chat, currentConversationId]);
 
   return null;
 }

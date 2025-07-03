@@ -128,7 +128,7 @@ export function ReasoningDisplay({
           )}
         </AnimatePresence>
 
-        {(!isExpanded || isStreaming) && reasoning && (
+        {!isExpanded && reasoning && (
           <div className="p-4">
             <div className="text-xs text-foreground-muted line-clamp-2">
               {reasoning.slice(0, 150)}
