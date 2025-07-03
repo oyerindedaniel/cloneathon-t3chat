@@ -8,7 +8,6 @@ import {
   Outlet,
 } from "react-router-dom";
 import { ConversationsLayout } from "@/components/layout/conversations-layout";
-import { useAuth } from "@/hooks/use-auth";
 import LoginPage from "@/main/auth/login-page";
 import SignupPage from "@/main/auth/signup-page";
 import ConversationsPage from "@/main/conversations/conversations-page";

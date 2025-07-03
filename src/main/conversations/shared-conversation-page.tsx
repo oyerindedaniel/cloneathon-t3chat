@@ -21,6 +21,7 @@ import { flushSync } from "react-dom";
 import { toAIMessage, toAIMessages } from "@/lib/utils/message";
 import { TypingDots } from "@/components/typing-dots";
 import { ForkNotice } from "@/components/fork-notice";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function SharedConversationPage() {
   const { shareId } = useParams<{ shareId: string }>();
@@ -129,6 +130,7 @@ export default function SharedConversationPage() {
       <div className="h-full flex flex-col grid-pattern-background px-8">
         <ErrorAlert
           isOpen={true}
+          variant="fixed"
           onClose={() => router.push("/conversations")}
           title="Shared Conversation Not Found"
           message={
@@ -145,29 +147,59 @@ export default function SharedConversationPage() {
 
   const messages = conversation?.messages ?? [];
 
+  const activeStreamingStatus =
+    status === "streaming" || status === "submitted";
+
   return (
     <>
       <div className="flex flex-col grid-pattern-background h-full px-8">
         <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+3rem)]">
           <div className="flex flex-col gap-12">
             {messages.map((message, index) => (
-              <div
-                key={message.id}
-                ref={index === messages.length - 1 ? lastMessageRef : undefined}
-                data-role={message.role}
-              >
-                <ChatMessage
-                  status={status}
-                  message={toAIMessage(message)}
-                  currentModel={selectedModel}
-                  onRetry={() => {}}
-                  onModelChange={setSelectedModel}
-                  addToolResult={addToolResult}
-                />
+              <div key={message.id}>
+                <div
+                  ref={
+                    index === messages.length - 1 ? lastMessageRef : undefined
+                  }
+                  data-role={message.role}
+                >
+                  <ChatMessage
+                    status={status}
+                    message={toAIMessage(message)}
+                    currentModel={selectedModel}
+                    onRetry={() => {}}
+                    onModelChange={setSelectedModel}
+                    addToolResult={addToolResult}
+                  />
+                </div>
+                {index === messages.length - 1 && !activeStreamingStatus && (
+                  <ErrorAlert
+                    isOpen={alertState.isOpen}
+                    onClose={hideAlert}
+                    title={alertState.title}
+                    message={alertState.message}
+                    type={alertState.type}
+                    onResume={reload}
+                    showResume={false}
+                    resetTimer={resetTimer}
+                  />
+                )}
               </div>
             ))}
 
-            {status === "submitted" && <TypingDots />}
+            <AnimatePresence>
+              {status === "submitted" && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <TypingDots />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <div ref={messagesEndRef} />
 
             {temporarySpaceHeight > 0 && (
@@ -191,11 +223,7 @@ export default function SharedConversationPage() {
             onImageAttach={() => {}}
             selectedModel={selectedModel}
             onModelChange={setSelectedModel}
-            disabled={
-              status === "streaming" ||
-              status === "submitted" ||
-              !isAuthenticated
-            }
+            disabled={activeStreamingStatus || !isAuthenticated}
             className="flex-1"
             onStop={() => {}}
             isGuest={isGuest}
@@ -205,19 +233,6 @@ export default function SharedConversationPage() {
           />
         </div>
       </div>
-
-      <ErrorAlert
-        isOpen={alertState.isOpen}
-        onClose={hideAlert}
-        title={alertState.title}
-        message={alertState.message}
-        type={alertState.type}
-        onResume={reload}
-        showResume={
-          status === "error" && alertState.title === "Streaming Error"
-        }
-        resetTimer={resetTimer}
-      />
     </>
   );
 }

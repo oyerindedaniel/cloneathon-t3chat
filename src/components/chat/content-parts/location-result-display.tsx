@@ -2,7 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle, MapPin, XCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { GetLocationResult } from "@/contexts/chat-context";
+import type { GetLocationResult } from "@/contexts/types";
 
 interface LocationResultDisplayProps {
   result: GetLocationResult;

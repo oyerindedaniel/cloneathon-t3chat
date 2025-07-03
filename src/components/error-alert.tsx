@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface ErrorAlertProps {
   isOpen: boolean;
   onClose: () => void;
+  variant?: "default" | "fixed";
   title: string;
   message: string;
   type?: "error" | "warning" | "info";
@@ -19,6 +20,7 @@ interface ErrorAlertProps {
 export const ErrorAlert = memo(function ErrorAlert({
   isOpen,
   onClose,
+  variant = "default",
   title,
   message,
   type = "error",
@@ -44,7 +46,10 @@ export const ErrorAlert = memo(function ErrorAlert({
     <Alert
       variant={type}
       className={cn(
-        "fixed top-[calc(var(--topbar-height)+1.5rem)] right-4 z-50 max-w-md shadow-lg animate-in slide-in-from-top-2 fade-in-0",
+        "shadow-lg",
+        variant === "default"
+          ? "w-full mt-3"
+          : "fixed top-[calc(var(--topbar-height)+1.5rem)] right-4 z-50 max-w-md animate-in slide-in-from-top-2 fade-in-0",
         className
       )}
       onMouseEnter={() => resetTimer?.()}
@@ -62,9 +67,9 @@ export const ErrorAlert = memo(function ErrorAlert({
             <X className="w-4 h-4" />
           </button>
         </AlertTitle>
-        <AlertDescription className="mb-3">{message}</AlertDescription>
-        {showResume && onResume && (
-          <div className="flex justify-end">
+        <AlertDescription className="flex justify-between gap-5">
+          {message}
+          {showResume && onResume && (
             <Button
               variant="outline"
               size="sm"
@@ -72,26 +77,13 @@ export const ErrorAlert = memo(function ErrorAlert({
                 onResume();
                 onClose();
               }}
-              className="h-8 px-3 rounded-full"
             >
               <RotateCcw className="w-3 h-3 mr-1" />
-              Resume
+              Retry
             </Button>
-          </div>
-        )}
+          )}
+        </AlertDescription>
       </div>
     </Alert>
   );
-},
-areEqual);
-
-function areEqual(prev: ErrorAlertProps, next: ErrorAlertProps): boolean {
-  return (
-    prev.isOpen === next.isOpen &&
-    prev.title === next.title &&
-    prev.message === next.message &&
-    prev.type === next.type &&
-    prev.showResume === next.showResume &&
-    prev.className === next.className
-  );
-}
+});

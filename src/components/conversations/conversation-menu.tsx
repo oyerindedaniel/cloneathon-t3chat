@@ -126,9 +126,9 @@ export const ConversationMenu = memo(function ConversationMenu({
                 e.stopPropagation();
                 setShowDeleteModal(true);
               }}
-              className="text-destructive focus:text-destructive"
+              className="text-error focus:text-error"
             >
-              <Trash2 className="w-3 h-3 mr-2" />
+              <Trash2 className="w-3 h-3 mr-2 text-error" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>

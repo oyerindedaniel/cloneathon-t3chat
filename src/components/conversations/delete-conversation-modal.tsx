@@ -36,7 +36,7 @@ export function DeleteConversationModal({
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className="bg-error text-white hover:bg-error/90"
           >
             Delete
           </AlertDialogAction>

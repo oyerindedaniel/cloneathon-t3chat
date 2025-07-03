@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "react-router-dom";
-import { useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatInput } from "@/components/chat/chat-input";
 import { MessageSkeleton } from "@/components/chat/message-skeleton";
@@ -16,28 +16,27 @@ import { useErrorAlert } from "@/hooks/use-error-alert";
 import { ErrorAlert } from "@/components/error-alert";
 import { ConnectionStatus } from "@/components/ui/connection-status";
 import { useConnectionStatus } from "@/hooks/use-connection-status";
-import { useGuestStorage } from "@/contexts/guest-storage-context";
-import { v4 as uuidv4 } from "uuid";
 import { TypingDots } from "@/components/typing-dots";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-Isomorphic-layout-effect";
+import { useNavigate } from "react-router-dom";
 
 export default function ChatPage() {
   const { id } = useParams<{ id: string }>();
   const { open } = useSidebar();
+  const navigate = useNavigate();
   const state = open ? "expanded" : "collapsed";
 
-  const {
-    messages,
-    append,
-    stop,
-    reload,
-    status,
-    experimental_resume,
-    addToolResult,
-  } = useChatMessages();
+  const { messages, stop, reload, status, experimental_resume, addToolResult } =
+    useChatMessages();
   const { selectedModel, setSelectedModel } = useChatConfig();
-  const { isNewConversation, setCurrentConversationId } = useChatControls();
+  const {
+    isNewConversation,
+    handleChatPageOnLoad,
+    handleNewMessage,
+    skipInitialChatLoadRef,
+  } = useChatControls();
   const {
     isConversationLoading,
     isGuest,
@@ -56,38 +55,33 @@ export default function ChatPage() {
   const { isConnected, isResuming, startResuming, stopResuming } =
     useConnectionStatus();
 
-  const { alertState, hideAlert, handleApiError, resetTimer } = useErrorAlert();
+  const { alertState, hideAlert, handleApiError } = useErrorAlert({
+    conversationId: id,
+  });
 
-  const guestStorage = useGuestStorage();
-
-  useEffect(() => {
-    if (id && !isNewConversation) {
-      setCurrentConversationId(id);
+  // TODO: using handleChatPageOnLoad as a dep causing infinite rerender becos coreChat is not stable
+  useIsomorphicLayoutEffect(() => {
+    if (skipInitialChatLoadRef.current) {
+      skipInitialChatLoadRef.current = false;
+      return;
     }
-  }, [id, setCurrentConversationId, isNewConversation]);
+
+    if (id && !isNewConversation) {
+      handleChatPageOnLoad(id);
+    }
+  }, [id, isNewConversation]);
 
   const handleMessageSubmit = useCallback(
     (message: string) => {
       if (!message.trim() || status === "streaming") return;
 
       try {
-        if (isGuest) {
-          guestStorage.addMessage(id!, {
-            id: uuidv4(),
-            role: "user",
-            content: message,
-            createdAt: new Date(),
-          });
-        }
-        append({
-          role: "user",
-          content: message,
-        });
+        handleNewMessage(message);
       } catch (error) {
         handleApiError(error, "sending message");
       }
     },
-    [status, handleApiError, append, isGuest, guestStorage, id]
+    [status, handleNewMessage, handleApiError]
   );
 
   const handleReload = () => {
@@ -147,32 +141,57 @@ export default function ChatPage() {
     );
   }
 
+  const isLastMessageUsers = messages && messages.at(-1)?.role === "user";
+
+  const activeStreamingStatus =
+    status === "streaming" || status === "submitted";
+
   return (
     <div className="flex flex-col grid-pattern-background h-full px-8">
       <ConnectionStatus
         isConnected={isConnected}
         isResuming={isResuming}
-        onRetry={handleRetryConnection}
+        onRetry={isLastMessageUsers ? handleRetryConnection : undefined}
       />
 
       <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+4rem)]">
         <div className="flex flex-col gap-12">
           {messages.map((message, index) => (
-            <div
-              key={message.id}
-              ref={index === messages.length - 1 ? lastMessageRef : undefined}
-              data-role={message.role}
-            >
-              <ChatMessage
-                status={status}
-                message={message}
-                currentModel={selectedModel}
-                onRetry={handleReload}
-                onModelChange={setSelectedModel}
-                addToolResult={addToolResult}
-              />
+            <div key={message.id}>
+              <div
+                ref={index === messages.length - 1 ? lastMessageRef : undefined}
+                data-role={message.role}
+              >
+                <ChatMessage
+                  status={status}
+                  message={message}
+                  currentModel={selectedModel}
+                  onRetry={handleReload}
+                  onModelChange={setSelectedModel}
+                  addToolResult={addToolResult}
+                />
+              </div>
+              {index === messages.length - 1 && (
+                <ErrorAlert
+                  isOpen={
+                    alertState.isOpen &&
+                    !activeStreamingStatus &&
+                    status === "error"
+                  }
+                  onClose={async () => {
+                    hideAlert();
+                    await reload();
+                  }}
+                  title={alertState.title}
+                  message={alertState.message}
+                  type={alertState.type}
+                  onResume={reload}
+                  showResume
+                />
+              )}
             </div>
           ))}
+
           <AnimatePresence>
             {status === "submitted" && (
               <motion.div
@@ -201,12 +220,23 @@ export default function ChatPage() {
         data-state={state}
         className="max-md:max-w-2xl max-md:w-full data-[state=collapsed]:!max-w-2xl data-[state=collapsed]:!w-full data-[state=collapsed]:!left-2/4 md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2"
       >
+        <ErrorAlert
+          className="mb-3"
+          isOpen={alertState.isOpen && status !== "error"}
+          onClose={() => {
+            hideAlert();
+            navigate("/conversations");
+          }}
+          title={alertState.title}
+          message={alertState.message}
+          type={alertState.type}
+        />
         <ChatInput
           onSubmit={handleMessageSubmit}
           onImageAttach={handleImageAttach}
           selectedModel={selectedModel}
           onModelChange={setSelectedModel}
-          disabled={status === "streaming" || status === "submitted"}
+          disabled={activeStreamingStatus}
           className="flex-1"
           onStop={handleStop}
           isGuest={isGuest}
@@ -215,19 +245,6 @@ export default function ChatPage() {
           maxMessages={maxMessages}
         />
       </div>
-
-      <ErrorAlert
-        isOpen={alertState.isOpen}
-        onClose={hideAlert}
-        title={alertState.title}
-        message={alertState.message}
-        type={alertState.type}
-        onResume={reload}
-        showResume={
-          status === "error" && alertState.title === "Streaming Error"
-        }
-        resetTimer={resetTimer}
-      />
     </div>
   );
 }

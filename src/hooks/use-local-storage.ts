@@ -34,7 +34,6 @@ export function useLocalStorage<T>(
           // Store in localStorage
           if (typeof window !== "undefined") {
             window.localStorage.setItem(key, JSON.stringify(valueToStore));
-            console.log("Stored in localStorage:", key, valueToStore);
           }
 
           return valueToStore;

@@ -5,13 +5,14 @@ import { ReasoningDisplay } from "./reasoning-display";
 import { ChatControls } from "./chat-controls";
 import { WebSearchResultsDisplay } from "./content-parts/web-search-results-display";
 import { LocationPermissionRequest } from "./content-parts/location-permission-request";
-import type { AllToolResults } from "@/contexts/chat-context";
+import type { AllToolResults, ChatHelpers } from "@/contexts/types";
 import { ToolInvocation } from "ai";
 import { AppToolResult } from "@/lib/ai/tools";
 import { LocationResultDisplay } from "./content-parts/location-result-display";
 import { UnknownToolDisplay } from "./content-parts/unknown-tool-display";
 import { SourceFileDisplay } from "./content-parts/source-file-display";
 import { motion } from "framer-motion";
+import { TypingDots } from "../typing-dots";
 
 interface ChatMessageProps {
   status: UseChatHelpers["status"];
@@ -19,7 +20,7 @@ interface ChatMessageProps {
   currentModel: string;
   onRetry: () => void;
   onModelChange: (modelId: string) => void;
-  addToolResult: (toolResult: AllToolResults) => void;
+  addToolResult: ChatHelpers["addToolResult"];
 }
 
 export const ChatMessage = memo(function ChatMessage({
@@ -68,6 +69,13 @@ export const ChatMessage = memo(function ChatMessage({
             //       <hr className="flex-grow border-t border-border-default" />
             //     </div>
             //   ) : null;
+            case "text":
+              const textPart = part;
+              return (
+                <div className="text-sm leading-relaxed text-foreground-default">
+                  <MarkdownRenderer content={textPart.text} />
+                </div>
+              );
             case "reasoning":
               const reasoningPart = part;
               return (
@@ -76,13 +84,6 @@ export const ChatMessage = memo(function ChatMessage({
                   reasoningPart={reasoningPart}
                   isStreaming={status === "streaming"}
                 />
-              );
-            case "text":
-              const textPart = part;
-              return (
-                <div className="text-sm leading-relaxed text-foreground-default">
-                  <MarkdownRenderer content={textPart.text} />
-                </div>
               );
             case "tool-invocation":
               const toolInvocationPart = part;
@@ -128,25 +129,16 @@ export const ChatMessage = memo(function ChatMessage({
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -10 }}
                           transition={{ duration: 0.2 }}
-                          className="flex items-center gap-2 p-2 text-base text-foreground-muted"
+                          className="inline-flex items-center gap-2 py-2 px-3 text-base text-foreground-muted"
                         >
-                          <div className="relative h-5 w-5">
-                            <motion.div
-                              animate={{
-                                scale: [1, 1.2, 1],
-                                opacity: [0.8, 0.4, 0.8],
-                              }}
-                              transition={{
-                                duration: 1.5,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                              }}
-                              className="absolute inset-0 rounded-full bg-primary/50"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="h-3 w-3 rounded-full bg-primary animate-spin-slow" />
-                            </div>
-                          </div>
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            <TypingDots />
+                          </motion.div>
                           <span>
                             Requesting user confirmation for location...
                           </span>

@@ -175,18 +175,6 @@ export const AVAILABLE_MODELS: AIModel[] = [
 
   // Free Models (Available without credits)
   {
-    id: "deepseek/deepseek-r1-0528-qwen3-8b:free",
-    name: "DeepSeek R1 0528 Qwen3 8B (Free)",
-    provider: "DeepSeek",
-    description:
-      "Distilled reasoning model with chain-of-thought capabilities, beating standard models by +10pp on AIME 2024",
-    maxTokens: 131000,
-    costPer1kTokens: { input: 0, output: 0 },
-    capabilities: ["Tool Usage"],
-    free: true,
-    recommended: true,
-  },
-  {
     id: "deepseek/deepseek-r1-0528:free",
     name: "DeepSeek R1 0528 (Free)",
     provider: "DeepSeek",
@@ -198,41 +186,6 @@ export const AVAILABLE_MODELS: AIModel[] = [
     free: true,
   },
   {
-    id: "mistralai/devstral-small:free",
-    name: "Mistral Devstral Small (Free)",
-    provider: "Mistral",
-    description:
-      "Agentic LLM optimized for software engineering tasks, achieving 46.8% on SWE-Bench Verified",
-    maxTokens: 131000,
-    costPer1kTokens: { input: 0, output: 0 },
-    capabilities: ["Tool Usage"],
-    free: true,
-  },
-  {
-    id: "meta-llama/llama-3.3-8b-instruct:free",
-    name: "Llama 3.3 8B Instruct (Free)",
-    provider: "Meta",
-    description:
-      "Lightweight and ultra-fast variant of Llama 3.3 70B, for quick response times",
-    maxTokens: 128000,
-    costPer1kTokens: { input: 0, output: 0 },
-    capabilities: ["Tool Usage"],
-    free: true,
-    recommended: true,
-  },
-  {
-    id: "microsoft/phi-4-reasoning-plus:free",
-    name: "Phi 4 Reasoning Plus (Free)",
-    provider: "Microsoft",
-    description:
-      "Enhanced 14B parameter model with reinforcement learning for math, science, and code reasoning",
-    maxTokens: 33000,
-    costPer1kTokens: { input: 0, output: 0 },
-    capabilities: ["Tool Usage"],
-    free: true,
-  },
-
-  {
     id: "meta-llama/llama-3.1-70b-instruct",
     name: "Llama 3.1 70B",
     provider: "Meta",
@@ -242,15 +195,16 @@ export const AVAILABLE_MODELS: AIModel[] = [
     capabilities: ["Tool Usage"],
     disabled: true,
     disabledReason: "Requires credits - upgrade to use premium models",
+    free: true,
   },
 ];
 
 export const DEFAULT_MODEL = AVAILABLE_MODELS.find(
-  (m) => m.id === "deepseek/deepseek-r1-0528-qwen3-8b:free"
+  (m) => m.id === "deepseek/deepseek-r1-0528:free"
 )!;
 
 export const TITLE_GENERATION_MODEL = AVAILABLE_MODELS.find(
-  (m) => m.id === "meta-llama/llama-3.3-8b-instruct:free"
+  (m) => m.id === "meta-llama/llama-3.1-70b-instruct"
 )!;
 
 export function getModelById(id: string): AIModel | undefined {

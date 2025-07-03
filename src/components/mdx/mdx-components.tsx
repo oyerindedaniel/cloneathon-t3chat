@@ -97,7 +97,10 @@ const H6 = ({
 // Text components
 const P = ({ className, ...props }: React.HTMLAttributes<HTMLElement>) => (
   <p
-    className={cn("text-foreground-default leading-relaxed mb-3", className)}
+    className={cn(
+      "text-foreground-default leading-relaxed mb-3 group-[.reasoning]:font-mono group-[.reasoning]:whitespace-pre-wrap group-[.reasoning]:text-xs group-[.reasoning]:text-foreground-subtle",
+      className
+    )}
     {...props}
   />
 );
@@ -276,7 +279,7 @@ const Pre = ({
   };
 
   return (
-    <div className="group mb-3 w-full h-full">
+    <div className="group mb-3 w-full h-auto will-change-auto">
       <div className="flex items-center justify-between px-4 py-2 bg-surface-tertiary/50 border border-border-subtle border-b-0 rounded-t-md backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono text-foreground-muted uppercase tracking-wide">
