@@ -130,11 +130,17 @@ export function GuestStorageProvider({
         const conversationToDelete = prev.conversations.find(
           (c) => c.id === id
         );
-        const messagesCount = conversationToDelete?.messages.length || 0;
+        const assistantMessagesCount =
+          conversationToDelete?.messages.filter(
+            (msg) => msg.role === "assistant"
+          ).length || 0;
 
         return {
           ...prev,
-          totalMessages: Math.max(0, prev.totalMessages - messagesCount),
+          totalMessages: Math.max(
+            0,
+            prev.totalMessages - assistantMessagesCount
+          ),
           conversations: prev.conversations.filter((conv) => conv.id !== id),
         };
       });

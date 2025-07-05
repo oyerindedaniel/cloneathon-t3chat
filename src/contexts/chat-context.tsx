@@ -450,6 +450,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const handleNewConversation = useCallback(() => {
     const newConversationId = uuidv4();
     setCurrentConversationId(newConversationId);
+    setSelectedModel(DEFAULT_MODEL.id);
     setActiveConversationIds((prev) => new Set([...prev, newConversationId]));
     navigate("/conversations");
   }, [navigate]);
@@ -606,23 +607,25 @@ function ChatStreamer({
       onFinish({ message, isTitleCreated });
     },
     onToolCall: ({ toolCall }) => {
-      chat.setMessages((prevMessages) => [
-        ...prevMessages,
-        {
-          id: messageIdGenerator(),
-          role: "assistant",
-          content: "",
-          parts: {
-            type: "tool-invocation",
-            toolInvocation: {
-              toolCallId: toolCall.toolCallId,
-              toolName: toolCall.toolName,
-              state: "awaiting_user_input" as LocationToolStatus,
-              args: (toolCall as LocationToolCall).args.message,
+      if (toolCall.toolName === "getLocation") {
+        chat.setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            id: messageIdGenerator(),
+            role: "assistant",
+            content: "",
+            parts: {
+              type: "tool-invocation",
+              toolInvocation: {
+                toolCallId: toolCall.toolCallId,
+                toolName: toolCall.toolName,
+                state: "awaiting_user_input" as LocationToolStatus,
+                args: (toolCall as LocationToolCall).args.message,
+              },
             },
-          },
-        } as unknown as AIMessage,
-      ]);
+          } as unknown as AIMessage,
+        ]);
+      }
     },
     onError: (error) => {
       console.error(`chat error for conversation ${conversationId}:`, error);
