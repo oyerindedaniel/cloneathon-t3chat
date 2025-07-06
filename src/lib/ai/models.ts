@@ -161,7 +161,7 @@ export const AVAILABLE_MODELS: AIModel[] = [
   },
   {
     id: "deepseek/deepseek-r1-0528",
-    name: "R1 0528",
+    name: "DeepSeek R1 0528",
     provider: "DeepSeek",
     description: "Open-source model with performance on par with OpenAI o1",
     maxTokens: 131072,

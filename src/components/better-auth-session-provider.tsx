@@ -1,13 +1,7 @@
 "use client";
 
 import { createContext, useContext, useRef } from "react";
-import type { Session, User } from "@/lib/auth-client"; 
-
-
-type BetterAuthCombinedSession = {
-  session: Session;
-  user: User;
-} | null;
+import { BetterAuthCombinedSession } from "@/hooks/use-auth";
 
 interface BetterAuthSessionContextType {
   initialSession: BetterAuthCombinedSession;
@@ -43,4 +37,4 @@ export function useBetterAuthSession() {
     );
   }
   return context.initialSession;
-} 
+}

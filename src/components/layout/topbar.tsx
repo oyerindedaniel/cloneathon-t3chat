@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useCallback } from "react";
+import React, { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Share2, Settings, LogOut, User, Key, Menu } from "lucide-react";
+import { Share2, Settings, LogOut, User, Key, Menu, LogIn } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSidebar } from "@/components/ui/sidebar";
 import { ModeToggler } from "@/components/mode-toggler";
@@ -22,6 +22,7 @@ import { useChatControls, useChatSessionStatus } from "@/contexts/chat-context";
 import { api } from "@/trpc/react";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
 const TopbarComponent = function Topbar() {
   const { user, signOut } = useAuth();
@@ -143,6 +144,15 @@ const TopbarComponent = function Topbar() {
                 <DropdownMenuItem className="gap-2 cursor-pointer">
                   <User className="w-4 h-4 text-foreground-subtle" />
                   Profile
+                </DropdownMenuItem>
+              )}
+
+              {!user && (
+                <DropdownMenuItem asChild className="gap-2 cursor-pointer">
+                  <Link to="/login">
+                    <LogIn className="w-4 h-4 text-foreground-subtle" />
+                    Login
+                  </Link>
                 </DropdownMenuItem>
               )}
 

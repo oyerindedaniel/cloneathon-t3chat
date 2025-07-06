@@ -1,25 +1,20 @@
-import { useRouter } from "next/navigation";
 import { authClient, type Session, type User } from "@/lib/auth-client";
 import { useBetterAuthSession } from "@/components/better-auth-session-provider";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-// The type for the combined session and user data as returned by better-auth
-type BetterAuthCombinedSession = {
+export type BetterAuthCombinedSession = {
   session: Session;
   user: User;
-} | null; // Can be null if not authenticated
+} | null;
 
 /**
  * Custom hook for authentication state and actions
- * Provides a composable interface for auth operations
  */
 export function useAuth() {
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const initialSession = useBetterAuthSession();
-
-  const [sessionData, setSessionData] =
-    useState<BetterAuthCombinedSession>(initialSession);
 
   const {
     data: clientSessionData,
@@ -28,11 +23,12 @@ export function useAuth() {
     refetch,
   } = authClient.useSession();
 
-  useEffect(() => {
-    if (clientSessionData !== undefined) {
-      setSessionData(clientSessionData);
-    }
-  }, [clientSessionData]);
+  const sessionData = clientSessionData ?? initialSession;
+
+  console.log("client auth --------------------", {
+    sessionData,
+    initialSession,
+  });
 
   /**
    * Sign up a new user with email and password
@@ -52,7 +48,7 @@ export function useAuth() {
       },
       {
         onSuccess: () => {
-          router.push(data.callbackURL || "/conversations");
+          navigate(data.callbackURL || "/conversations");
         },
         onError: (ctx) => {
           console.error("Sign up error:", ctx.error.message);
@@ -79,7 +75,7 @@ export function useAuth() {
       },
       {
         onSuccess: () => {
-          router.push(data.callbackURL || "/conversations");
+          navigate(data.callbackURL || "/conversations");
         },
         onError: (ctx) => {
           console.error("Sign in error:", ctx.error.message);
@@ -102,7 +98,7 @@ export function useAuth() {
       },
       {
         onSuccess: () => {
-          router.push(data.callbackURL || "/conversations");
+          navigate(data.callbackURL || "/conversations");
         },
         onError: (ctx) => {
           console.error(`${data.provider} sign in error:`, ctx.error.message);
@@ -132,7 +128,7 @@ export function useAuth() {
     return await authClient.signOut({
       fetchOptions: {
         onSuccess: () => {
-          router.push(redirectTo || "/login");
+          navigate(redirectTo || "/login");
         },
       },
     });
