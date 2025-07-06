@@ -25,11 +25,6 @@ export function useAuth() {
 
   const sessionData = clientSessionData ?? initialSession;
 
-  console.log("client auth --------------------", {
-    sessionData,
-    initialSession,
-  });
-
   /**
    * Sign up a new user with email and password
    */

@@ -43,8 +43,6 @@ export default async function RootLayout({
   }
   const session = await auth.api.getSession({ headers: requestHeaders });
 
-  console.log("server auth --------------------", session);
-
   const queryClient = new QueryClient();
 
   // queryKey: getQueryKey(
