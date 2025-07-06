@@ -200,7 +200,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           });
         }
       } catch (error) {
-        showToast("Failed to update title:", "error");
+        showToast("Failed to update title", "error");
 
         if (!isGuest && previousTitleRef.current) {
           utils.conversations.getById.setData({ id: convId }, (old) =>

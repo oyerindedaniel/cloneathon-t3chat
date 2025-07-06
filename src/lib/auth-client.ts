@@ -1,12 +1,9 @@
 import { createAuthClient } from "better-auth/react";
 import type { auth } from "@/server/auth/config";
+import { getBaseUrl } from "./utils/app";
 
 export const authClient = createAuthClient({
-  baseURL:
-    process.env.NODE_ENV === "production"
-      ? process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-      : "http://localhost:3000",
-
+  baseURL: getBaseUrl(),
   fetchOptions: {
     onError: (e) => {
       if (e.error.status === 429) {
