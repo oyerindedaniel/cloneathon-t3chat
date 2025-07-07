@@ -8,6 +8,7 @@ import { useUncontrolledInputEmpty } from "@/hooks/use-uncontrolled-input-empty"
 import { useAutosizeTextArea } from "@/hooks/use-autosize-textarea";
 import { Textarea } from "@/components/ui/textarea";
 import { useCombinedRefs } from "@/hooks/use-combined-ref";
+import { useChatMessages } from "@/contexts/chat-context";
 
 interface ChatInputProps {
   onSubmit: (message: string) => void;
@@ -47,6 +48,8 @@ export const ChatInput = memo(function ChatInput({
   const effectiveDisabled = disabled || isAtLimit;
 
   const [autosizeRef, resize] = useAutosizeTextArea(130);
+
+  const { status } = useChatMessages();
 
   const [emptyRef, isEmpty, _, handleSubmit] = useUncontrolledInputEmpty();
 
@@ -145,7 +148,7 @@ export const ChatInput = memo(function ChatInput({
               </Button> */}
             </div>
             <>
-              {disabled && onStop ? (
+              {status === "streaming" || status === "submitted" ? (
                 <Button
                   type="button"
                   variant="destructive"

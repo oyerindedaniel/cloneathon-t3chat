@@ -39,7 +39,7 @@ export function ForkNotice({
       {!isAuthenticated && !isDismissed && (
         <div className="flex items-center mb-3 justify-between gap-3 px-4 py-3 rounded-lg border backdrop-blur-md bg-primary/40 border-primary/50 text-white">
           <div className="space-y-2">
-            <p className="font-medium block">
+            <p className="font-medium block text-sm">
               You are viewing a shared conversation. Sign in to fork it and
               continue chatting.
             </p>{" "}
@@ -56,7 +56,7 @@ export function ForkNotice({
           <Button
             variant="ghost"
             size="icon"
-            className="w-6 h-6 hover:bg-background/50"
+            className="w-6 h-6 hover:bg-background/50 self-start"
             onClick={() => setIsDismissed(true)}
           >
             <X className="w-3 h-3" />
