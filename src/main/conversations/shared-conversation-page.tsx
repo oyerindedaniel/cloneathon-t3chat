@@ -1,6 +1,3 @@
-"use client";
-
-import { useParams, useRouter } from "next/navigation";
 import React, { useCallback, useRef } from "react";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatInput } from "@/components/chat/chat-input";
@@ -22,13 +19,18 @@ import { toAIMessage, toAIMessages } from "@/lib/utils/message";
 import { TypingDots } from "@/components/typing-dots";
 import { ForkNotice } from "@/components/fork-notice";
 import { AnimatePresence, motion } from "framer-motion";
+import { useParams, useNavigate } from "react-router-dom";
+import { useSidebar } from "@/components/ui/sidebar";
 
 export default function SharedConversationPage() {
-  const { shareId } = useParams<{ shareId: string }>();
+  const { shareId = "" } = useParams<{ shareId: string }>();
 
-  const router = useRouter();
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { isNewConversation, setIsNewConversation } = useChatControls();
+  const { open } = useSidebar();
+
+  const state = open ? "expanded" : "collapsed";
 
   const userMessage = useRef<string | null>(null);
 
@@ -54,7 +56,7 @@ export default function SharedConversationPage() {
   const { messagesEndRef, lastMessageRef, temporarySpaceHeight } =
     useAutoScroll({
       smooth: true,
-      messages: conversation?.messages ?? [],
+      messages: toAIMessages(conversation?.messages ?? []),
       status,
     });
 
@@ -67,7 +69,7 @@ export default function SharedConversationPage() {
         if (conversationStatus === "success") {
           setMessages(toAIMessages(conversation?.messages ?? []));
         }
-        router.push(`/conversations/${newConversation.id}`);
+        navigate(`/conversations/${newConversation.id}`);
       });
 
       if (!!userMessage.current) {
@@ -88,11 +90,6 @@ export default function SharedConversationPage() {
         return;
 
       userMessage.current = messageContent;
-
-      if (!isAuthenticated) {
-        console.error("Cannot fork conversation: User not authenticated.");
-        return;
-      }
 
       await forkConversationMutation.mutateAsync({
         shareId,
@@ -131,7 +128,7 @@ export default function SharedConversationPage() {
         <ErrorAlert
           isOpen={true}
           variant="fixed"
-          onClose={() => router.push("/conversations")}
+          onClose={() => navigate("/conversations")}
           title="Shared Conversation Not Found"
           message={
             conversationError?.message ||
@@ -212,7 +209,10 @@ export default function SharedConversationPage() {
           </div>
         </div>
 
-        <div className="max-md:max-w-2xl max-md:w-full md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2">
+        <div
+          data-state={state}
+          className="max-md:max-w-2xl max-md:w-full data-[state=collapsed]:!max-w-2xl data-[state=collapsed]:!w-full data-[state=collapsed]:!left-2/4 md:w-[min(42rem,_calc(100vw_-_var(--sidebar-width)_-_2rem))] fixed bottom-6 left-2/4 md:left-[calc((100vw+var(--sidebar-width))/2)] -translate-x-1/2"
+        >
           <ForkNotice
             forkConversationMutation={forkConversationMutation}
             shareId={shareId}
@@ -223,7 +223,11 @@ export default function SharedConversationPage() {
             onImageAttach={() => {}}
             selectedModel={selectedModel}
             onModelChange={setSelectedModel}
-            disabled={activeStreamingStatus || !isAuthenticated}
+            disabled={
+              activeStreamingStatus ||
+              !isAuthenticated ||
+              forkConversationMutation.isPending
+            }
             className="flex-1"
             onStop={() => {}}
             isGuest={isGuest}

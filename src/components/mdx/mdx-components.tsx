@@ -151,6 +151,8 @@ const A = ({
       "text-primary hover:text-primary/80 underline underline-offset-2 transition-colors",
       className
     )}
+    target="_blank"
+    rel="noopener noreferrer"
     {...props}
   />
 );
