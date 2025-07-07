@@ -23,7 +23,7 @@ import { useIsomorphicLayoutEffect } from "@/hooks/use-Isomorphic-layout-effect"
 import { useNavigate } from "react-router-dom";
 
 export default function ChatPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id = "" } = useParams<{ id: string }>();
   const { open } = useSidebar();
   const navigate = useNavigate();
   const state = open ? "expanded" : "collapsed";
@@ -59,7 +59,6 @@ export default function ChatPage() {
     conversationId: id,
   });
 
-  // TODO: using handleChatPageOnLoad as a dep causing infinite rerender becos coreChat is not stable
   useIsomorphicLayoutEffect(() => {
     if (skipInitialChatLoadRef.current) {
       skipInitialChatLoadRef.current = false;
@@ -69,7 +68,7 @@ export default function ChatPage() {
     if (id && !isNewConversation) {
       handleChatPageOnLoad(id);
     }
-  }, [id, isNewConversation]);
+  }, [id, isNewConversation, handleChatPageOnLoad]);
 
   const handleMessageSubmit = useCallback(
     (message: string) => {

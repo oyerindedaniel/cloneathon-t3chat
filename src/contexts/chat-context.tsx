@@ -448,11 +448,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleNewConversation = useCallback(() => {
+    navigate("/conversations");
     const newConversationId = uuidv4();
     setCurrentConversationId(newConversationId);
     setSelectedModel(DEFAULT_MODEL.id);
     setActiveConversationIds((prev) => new Set([...prev, newConversationId]));
-    navigate("/conversations");
   }, [navigate]);
 
   // console.log({

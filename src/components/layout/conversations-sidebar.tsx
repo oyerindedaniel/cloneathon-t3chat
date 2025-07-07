@@ -14,7 +14,6 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { v4 as uuidv4 } from "uuid";
 import { useConversations } from "@/hooks/use-conversations";
 import { useNavigate, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from "react";
-import { UseChatHelpers } from "@ai-sdk/react";
+import { UseChatHelpers, Message } from "@ai-sdk/react";
 import { useChatControls } from "@/contexts/chat-context";
 
 interface UseAutoScrollOptions {
@@ -31,7 +31,7 @@ interface UseAutoScrollOptions {
   /**
    * Messages array to track for auto-scrolling
    */
-  messages?: Array<{ role: string; [key: string]: any }>;
+  messages?: Array<Message>;
   /**
    * AI status
    */
