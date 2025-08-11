@@ -198,9 +198,7 @@ export const AVAILABLE_MODELS: AIModel[] = [
   },
 ];
 
-export const DEFAULT_MODEL =
-  AVAILABLE_MODELS.find((m) => m.id === "openai/gpt-oss-20b:free") ||
-  AVAILABLE_MODELS.find((m) => m.free);
+export const DEFAULT_MODEL = AVAILABLE_MODELS.find((m) => m.free)!;
 
 export const TITLE_GENERATION_MODEL =
   AVAILABLE_MODELS.find((m) => m.id === "google/gemini-2.0-flash-exp:free") ||
