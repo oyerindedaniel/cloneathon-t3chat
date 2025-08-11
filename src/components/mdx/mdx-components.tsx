@@ -340,7 +340,7 @@ const Pre = ({
 
       <SyntaxHighlighter
         language={language}
-        style={theme === "dark" ? vscDarkPlus : oneLight}
+        style={theme === "dark" ? oneDark : oneLight}
         showLineNumbers={showLineNumbers}
         customStyle={{
           margin: 0,
