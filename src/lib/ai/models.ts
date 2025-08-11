@@ -198,13 +198,13 @@ export const AVAILABLE_MODELS: AIModel[] = [
   },
 ];
 
-export const DEFAULT_MODEL = AVAILABLE_MODELS.find(
-  (m) => m.id === "deepseek/deepseek-r1-0528:free"
-)!;
+export const DEFAULT_MODEL =
+  AVAILABLE_MODELS.find((m) => m.id === "openai/gpt-oss-20b:free") ||
+  AVAILABLE_MODELS.find((m) => m.free);
 
-export const TITLE_GENERATION_MODEL = AVAILABLE_MODELS.find(
-  (m) => m.id === "meta-llama/llama-3.1-70b-instruct"
-)!;
+export const TITLE_GENERATION_MODEL =
+  AVAILABLE_MODELS.find((m) => m.id === "google/gemini-2.0-flash-exp:free") ||
+  DEFAULT_MODEL;
 
 export function getModelById(id: string): AIModel | undefined {
   return AVAILABLE_MODELS.find((model) => model.id === id);
