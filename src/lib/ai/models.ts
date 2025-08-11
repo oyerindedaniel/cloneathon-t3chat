@@ -8,14 +8,7 @@ export interface AIModel {
     input: number;
     output: number;
   };
-  capabilities: (
-    | "Image Input"
-    | "Object Generation"
-    | "Tool Usage"
-    | "Tool Streaming"
-    | "Audio Input"
-    | "Extended Thinking"
-  )[];
+  capabilities: string[];
   recommended?: boolean;
   free?: boolean;
   supportsImages?: boolean;
@@ -175,26 +168,32 @@ export const AVAILABLE_MODELS: AIModel[] = [
 
   // Free Models (Available without credits)
   {
-    id: "deepseek/deepseek-r1-0528:free",
-    name: "DeepSeek R1 0528 (Free)",
-    provider: "DeepSeek",
+    id: "google/gemini-2.0-flash-exp:free",
+    name: "Google: Gemini 2.0 Flash Experimental (free)",
+    provider: "Google",
     description:
-      "Open-source reasoning model with performance on par with OpenAI o1, fully open reasoning tokens",
-    maxTokens: 164000,
+      "Gemini Flash 2.0 offers a significantly faster time to first token (TTFT) compared to Gemini Flash 1.5, while maintaining quality on par with larger models like Gemini Pro 1.5. It introduces notable enhancements in multimodal understanding, coding capabilities, complex instruction following, and function calling. These advancements come together to deliver more seamless and robust agentic experiences.",
+    maxTokens: 1048576,
     costPer1kTokens: { input: 0, output: 0 },
-    capabilities: ["Tool Usage"],
+    capabilities: ["Tool Usage", "Multimodal Understanding", "Code Generation"],
     free: true,
   },
   {
-    id: "meta-llama/llama-3.1-70b-instruct",
-    name: "Llama 3.1 70B",
-    provider: "Meta",
-    description: "Large open-source model with strong performance",
-    maxTokens: 4096,
-    costPer1kTokens: { input: 0.0009, output: 0.0009 },
-    capabilities: ["Tool Usage"],
-    disabled: true,
-    disabledReason: "Requires credits - upgrade to use premium models",
+    id: "openai/gpt-oss-20b:free",
+    name: "OpenAI: gpt-oss-20b (free)",
+    provider: "OpenAI",
+    description:
+      "gpt-oss-20b is an open-weight 21B parameter model released by OpenAI under the Apache 2.0 license. It uses a Mixture-of-Experts (MoE) architecture with 3.6B active parameters per forward pass, optimized for lower-latency inference and deployability on consumer or single-GPU hardware. The model is trained in OpenAI’s Harmony response format and supports reasoning level configuration, fine-tuning, and agentic capabilities including function calling, tool use, and structured outputs.",
+    maxTokens: 131072,
+    costPer1kTokens: { input: 0, output: 0 },
+    capabilities: [
+      "Tool Usage",
+      "Function Calling",
+      "Structured Outputs",
+      "Reasoning",
+      "Fine-tuning",
+      "Code Generation",
+    ],
     free: true,
   },
 ];
