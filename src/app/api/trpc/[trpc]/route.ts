@@ -14,7 +14,6 @@ const createContext = async (req: NextRequest) => {
     headers: req.headers,
   });
 
- 
   return createTRPCContext({
     headers: req.headers,
     session,
