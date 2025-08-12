@@ -397,6 +397,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       cleanupInactiveConversations();
 
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }
+
       flushSync(() => {
         setCurrentConversationId(conversationId);
         setActiveConversationIds((prev) => new Set([...prev, conversationId]));

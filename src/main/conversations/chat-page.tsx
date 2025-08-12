@@ -154,7 +154,10 @@ export default function ChatPage() {
       />
 
       <div className="h-full flex flex-col py-4 max-w-2xl mx-auto w-full pb-[calc(var(--search-height)+4rem)]">
-        <div className="flex flex-col gap-12">
+        <div
+          key={id}
+          className="flex flex-col min-h-0 gap-12 transition-[min-height,opacity] duration-200 ease-out"
+        >
           {messages.map((message, index) => (
             <div key={message.id}>
               <div

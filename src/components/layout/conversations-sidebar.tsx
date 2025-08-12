@@ -32,6 +32,7 @@ import {
 } from "@/contexts/guest-storage-context";
 import { Message as AIMessage } from "ai";
 import { useDebounce } from "@/hooks/use-debounce";
+import { Link } from "react-router-dom";
 
 interface DisplayConversation {
   id: string;
@@ -225,9 +226,7 @@ export function ConversationsSidebar() {
                       <SidebarMenuItem key={conversation.id}>
                         <div className="group/item relative">
                           <SidebarMenuButton
-                            onClick={() =>
-                              handleConversationClick(conversation.id)
-                            }
+                            asChild
                             className={cn(
                               "relative font-sans text-sm w-full justify-start pr-8 hover:bg-surface-secondary",
                               currentId === conversation.id &&
@@ -236,11 +235,19 @@ export function ConversationsSidebar() {
                                 "pointer-events-none"
                             )}
                           >
-                            {editingId !== conversation.id && (
-                              <div className="truncate">
-                                {conversation.title}
-                              </div>
-                            )}
+                            <Link
+                              to={`/conversations/${conversation.id}`}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleConversationClick(conversation.id);
+                              }}
+                            >
+                              {editingId !== conversation.id && (
+                                <div className="truncate">
+                                  {conversation.title}
+                                </div>
+                              )}
+                            </Link>
                           </SidebarMenuButton>
 
                           <ConversationMenu
