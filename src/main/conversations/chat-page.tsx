@@ -224,7 +224,7 @@ export default function ChatPage() {
       >
         <ErrorAlert
           className="mb-3"
-          isOpen={alertState.isOpen && status !== "error"}
+          isOpen={alertState.isOpen && status === "ready"}
           onClose={() => {
             hideAlert();
             navigate("/conversations");
