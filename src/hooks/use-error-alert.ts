@@ -10,10 +10,11 @@ import { getErrorDisplayInfo } from "@/lib/utils/openrouter-errors";
 import { useSettings } from "@/contexts/settings-context";
 import { TRPCClientError } from "@trpc/client";
 import type { AppRouter } from "@/server/api/root";
-import { useChatSessionStatus, useChatMessages } from "@/contexts/chat-context";
 import { useGuestStorage } from "@/contexts/guest-storage-context";
 import { useAuth } from "./use-auth";
 import { useToast } from "./use-toast";
+import { useShallowSelector } from "react-shallow-store";
+import { ChatContext } from "@/contexts/chat-context";
 
 export type ErrorType = "error" | "warning" | "info";
 
@@ -48,8 +49,15 @@ export function useErrorAlert(options: UseErrorAlertOptions = {}) {
   const { openSettings } = useSettings();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { conversationError, isConversationError } = useChatSessionStatus();
-  const { error: chatError } = useChatMessages();
+  const {
+    conversationError,
+    isConversationError,
+    error: chatError,
+  } = useShallowSelector(ChatContext, (state) => ({
+    conversationError: state.conversationError,
+    isConversationError: state.isConversationError,
+    error: state.error,
+  }));
 
   const [alertState, setAlertState] = useState<AlertState>(defaultAlertState);
 

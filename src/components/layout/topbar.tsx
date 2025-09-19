@@ -18,19 +18,26 @@ import { ModeToggler } from "@/components/mode-toggler";
 import { useSettings } from "@/contexts/settings-context";
 import { ShortcutBadge } from "@/components/ui/shortcut-badge";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import { useChatControls, useChatSessionStatus } from "@/contexts/chat-context";
 import { api } from "@/trpc/react";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { useShallowSelector } from "react-shallow-store";
+import { ChatContext } from "@/contexts/chat-context";
 
 const TopbarComponent = function Topbar() {
   const { user, signOut } = useAuth();
   const { open, toggleSidebar } = useSidebar();
   const { openSettings } = useSettings();
   const { getShortcutDisplay, shortcuts } = useKeyboardShortcuts();
-  const { currentConversationId } = useChatControls();
-  const { isGuest } = useChatSessionStatus();
+
+  const { currentConversationId, isGuest } = useShallowSelector(
+    ChatContext,
+    (state) => ({
+      currentConversationId: state.currentConversationId,
+      isGuest: state.isGuest,
+    })
+  );
   const { copy } = useClipboard();
   const { showToast } = useToast();
 

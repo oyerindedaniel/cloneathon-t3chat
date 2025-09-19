@@ -18,7 +18,7 @@ import { useConversations } from "@/hooks/use-conversations";
 import { useNavigate, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { ConversationMenu } from "@/components/conversations/conversation-menu";
-import { useChatControls } from "@/contexts/chat-context";
+import { useShallowSelector } from "react-shallow-store";
 import { ConversationSearch } from "../conversations/conversation-search";
 import { useAuth } from "@/hooks/use-auth";
 import { ShortcutBadge } from "@/components/ui/shortcut-badge";
@@ -33,6 +33,7 @@ import {
 import { Message as AIMessage } from "ai";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Link } from "react-router-dom";
+import { ChatContext } from "@/contexts/chat-context";
 
 interface DisplayConversation {
   id: string;
@@ -65,7 +66,13 @@ export function ConversationsSidebar() {
 
   const guestStorage = useGuestStorage();
 
-  const { switchToConversation, handleNewConversation } = useChatControls();
+  const { switchToConversation, handleNewConversation } = useShallowSelector(
+    ChatContext,
+    (state) => ({
+      switchToConversation: state.switchToConversation,
+      handleNewConversation: state.handleNewConversation,
+    })
+  );
 
   const isGuest = !isAuthenticated;
   const allConversations: DisplayConversation[] = useMemo(() => {

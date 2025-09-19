@@ -8,7 +8,8 @@ import { useUncontrolledInputEmpty } from "@/hooks/use-uncontrolled-input-empty"
 import { useAutosizeTextArea } from "@/hooks/use-autosize-textarea";
 import { Textarea } from "@/components/ui/textarea";
 import { useCombinedRefs } from "@/hooks/use-combined-ref";
-import { useChatMessages } from "@/contexts/chat-context";
+import { useShallowSelector } from "react-shallow-store";
+import { ChatContext } from "@/contexts/chat-context";
 
 interface ChatInputProps {
   onSubmit: (message: string) => void;
@@ -49,7 +50,9 @@ export const ChatInput = memo(function ChatInput({
 
   const [autosizeRef, resize] = useAutosizeTextArea(130);
 
-  const { status } = useChatMessages();
+  const { status } = useShallowSelector(ChatContext, (state) => ({
+    status: state.status,
+  }));
 
   const [emptyRef, isEmpty, _, handleSubmit] = useUncontrolledInputEmpty();
 

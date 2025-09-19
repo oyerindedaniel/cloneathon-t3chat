@@ -36,8 +36,9 @@ import { api } from "@/trpc/react";
 import { ApiKeyStats } from "@/components/api-key-stats";
 import { ShortcutBadge } from "@/components/ui/shortcut-badge";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
-import { useChatConfig } from "@/contexts/chat-context";
 import { useSettings } from "@/contexts/settings-context";
+import { useShallowSelector } from "react-shallow-store";
+import { ChatContext } from "@/contexts/chat-context";
 
 export function SettingsDialog() {
   const [newApiKey, setNewApiKey] = useState("");
@@ -48,7 +49,9 @@ export function SettingsDialog() {
   const { showToast } = useToast();
   const { shortcuts, getShortcutDisplay } = useKeyboardShortcuts();
 
-  const { selectedModel } = useChatConfig();
+  const { selectedModel } = useShallowSelector(ChatContext, (state) => ({
+    selectedModel: state.selectedModel,
+  }));
   const { isOpen, section, closeSettings, setSection } = useSettings();
 
   const utils = api.useUtils();
