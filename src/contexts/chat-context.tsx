@@ -6,8 +6,9 @@ import React, {
   useMemo,
   RefObject,
   startTransition,
+  createContext,
 } from "react";
-import { createContext, useContextSelector } from "use-context-selector";
+import { type StoreApi, useContextStore } from "react-shallow-store";
 import { useChat as useAIChat } from "@ai-sdk/react";
 import { createIdGenerator, Message } from "ai";
 import { useAuth } from "@/hooks/use-auth";
@@ -57,7 +58,9 @@ interface ChatContextType extends ChatHelpers {
   toggleWebSearch: () => void;
 }
 
-const ChatContext = createContext<ChatContextType>(null!);
+export const ChatContext = createContext<StoreApi<ChatContextType> | null>(
+  null!
+);
 
 const messageIdGenerator = createIdGenerator({
   prefix: "msgc",
@@ -491,8 +494,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     conversationError,
   };
 
+  const chatStore = useContextStore(value);
+
   return (
-    <ChatContext.Provider value={value}>
+    <ChatContext.Provider value={chatStore}>
       {Array.from(activeConversationIds).map((convId) => (
         <ChatStreamer
           key={convId}
@@ -659,63 +664,4 @@ function ChatStreamer({
   ]);
 
   return null;
-}
-
-export function useChatMessages() {
-  return useContextSelector(ChatContext, (state: ChatContextType) => ({
-    messages: state.messages,
-    setMessages: state.setMessages,
-    append: state.append,
-    stop: state.stop,
-    reload: state.reload,
-    status: state.status,
-    error: state.error,
-    experimental_resume: state.experimental_resume,
-    addToolResult: state.addToolResult,
-  }));
-}
-
-export function useChatInput() {
-  return useContextSelector(ChatContext, (state) => ({
-    input: state.input,
-    handleInputChange: state.handleInputChange,
-    handleSubmit: state.handleSubmit,
-  }));
-}
-
-export function useChatControls() {
-  return useContextSelector(ChatContext, (state) => ({
-    currentConversationId: state.currentConversationId,
-    startNewConversationInstant: state.startNewConversationInstant,
-    switchToConversation: state.switchToConversation,
-    handleNewMessage: state.handleNewMessage,
-    handleNewConversation: state.handleNewConversation,
-    setCurrentConversationId: state.setCurrentConversationId,
-    handleChatPageOnLoad: state.handleChatPageOnLoad,
-    skipInitialChatLoadRef: state.skipInitialChatLoadRef,
-    isNewConversation: state.isNewConversation,
-    setIsNewConversation: state.setIsNewConversation,
-  }));
-}
-
-export function useChatConfig() {
-  return useContextSelector(ChatContext, (state) => ({
-    selectedModel: state.selectedModel,
-    setSelectedModel: state.setSelectedModel,
-    isWebSearchEnabled: state.isWebSearchEnabled,
-    toggleWebSearch: state.toggleWebSearch,
-  }));
-}
-
-export function useChatSessionStatus() {
-  return useContextSelector(ChatContext, (state) => ({
-    isConversationLoading: state.isConversationLoading,
-    isGuest: state.isGuest,
-    canSendMessage: state.canSendMessage,
-    remainingMessages: state.remainingMessages,
-    totalMessages: state.totalMessages,
-    conversationError: state.conversationError,
-    isConversationError: state.isConversationError,
-    maxMessages: state.maxMessages,
-  }));
 }

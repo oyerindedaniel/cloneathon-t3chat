@@ -9,11 +9,7 @@ import { ModelSelector } from "@/components/model-selector";
 import { SuggestionCard } from "@/components/suggestion-card";
 import { MessageLimitWarning } from "@/components/message-limit-warning";
 import { DEFAULT_SUGGESTIONS } from "@/lib/constants/suggestions";
-import {
-  useChatConfig,
-  useChatControls,
-  useChatSessionStatus,
-} from "@/contexts/chat-context";
+import { ChatContext } from "@/contexts/chat-context";
 import { useUncontrolledInputEmpty } from "@/hooks/use-uncontrolled-input-empty";
 import { useAutosizeTextArea } from "@/hooks/use-autosize-textarea";
 import { useCombinedRefs } from "@/hooks/use-combined-ref";
@@ -23,7 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useChatMessages } from "@/contexts/chat-context";
+import { useShallowSelector } from "react-shallow-store";
 
 export default function ConversationsPage() {
   const {
@@ -31,17 +27,27 @@ export default function ConversationsPage() {
     setSelectedModel,
     isWebSearchEnabled,
     toggleWebSearch,
-  } = useChatConfig();
-  const { startNewConversationInstant } = useChatControls();
-  const { status } = useChatMessages();
-
-  const {
     isGuest,
     canSendMessage,
     remainingMessages,
     totalMessages,
     maxMessages,
-  } = useChatSessionStatus();
+    startNewConversationInstant,
+    status,
+  } = useShallowSelector(ChatContext, (state) => ({
+    selectedModel: state.selectedModel,
+    setSelectedModel: state.setSelectedModel,
+    isWebSearchEnabled: state.isWebSearchEnabled,
+    toggleWebSearch: state.toggleWebSearch,
+    isGuest: state.isGuest,
+    canSendMessage: state.canSendMessage,
+    remainingMessages: state.remainingMessages,
+    totalMessages: state.totalMessages,
+    maxMessages: state.maxMessages,
+    startNewConversationInstant: state.startNewConversationInstant,
+    status: state.status,
+  }));
+  
 
   const isAtLimit = isGuest && !canSendMessage;
 

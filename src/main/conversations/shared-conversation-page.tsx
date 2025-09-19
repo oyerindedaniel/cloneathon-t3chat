@@ -2,12 +2,6 @@ import React, { useCallback, useRef } from "react";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatInput } from "@/components/chat/chat-input";
 import { MessageSkeleton } from "@/components/chat/message-skeleton";
-import {
-  useChatMessages,
-  useChatConfig,
-  useChatControls,
-  useChatSessionStatus,
-} from "@/contexts/chat-context";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { useErrorAlert } from "@/hooks/use-error-alert";
 import { ErrorAlert } from "@/components/error-alert";
@@ -21,18 +15,49 @@ import { ForkNotice } from "@/components/fork-notice";
 import { AnimatePresence, motion } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSidebar } from "@/components/ui/sidebar";
+import { ChatContext } from "@/contexts/chat-context";
+import { useShallowSelector } from "react-shallow-store";
 
 export default function SharedConversationPage() {
   const { shareId = "" } = useParams<{ shareId: string }>();
 
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const { isNewConversation, setIsNewConversation } = useChatControls();
   const { open } = useSidebar();
 
   const state = open ? "expanded" : "collapsed";
 
   const userMessage = useRef<string | null>(null);
+
+  const {
+    reload,
+    status,
+    addToolResult,
+    setMessages,
+    append,
+    selectedModel,
+    setSelectedModel,
+    isGuest,
+    remainingMessages,
+    totalMessages,
+    maxMessages,
+    isNewConversation,
+    setIsNewConversation,
+  } = useShallowSelector(ChatContext, (state) => ({
+    reload: state.reload,
+    status: state.status,
+    addToolResult: state.addToolResult,
+    setMessages: state.setMessages,
+    append: state.append,
+    selectedModel: state.selectedModel,
+    setSelectedModel: state.setSelectedModel,
+    isGuest: state.isGuest,
+    remainingMessages: state.remainingMessages,
+    totalMessages: state.totalMessages,
+    maxMessages: state.maxMessages,
+    isNewConversation: state.isNewConversation,
+    setIsNewConversation: state.setIsNewConversation,
+  }));
 
   const {
     conversation,
@@ -45,13 +70,6 @@ export default function SharedConversationPage() {
     isNewConversation,
     isSharedLink: true,
   });
-
-  const { reload, status, addToolResult, setMessages, append } =
-    useChatMessages();
-
-  const { selectedModel, setSelectedModel } = useChatConfig();
-  const { isGuest, remainingMessages, totalMessages, maxMessages } =
-    useChatSessionStatus();
 
   const { messagesEndRef, lastMessageRef, temporarySpaceHeight } =
     useAutoScroll({

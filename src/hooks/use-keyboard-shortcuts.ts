@@ -1,7 +1,8 @@
 import { useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useChatControls } from "@/contexts/chat-context";
+import { ChatContext } from "@/contexts/chat-context";
 import { useSettings } from "@/contexts/settings-context";
+import { useShallowSelector } from "react-shallow-store";
 
 export interface KeyboardShortcut {
   key: string;
@@ -16,7 +17,13 @@ export interface KeyboardShortcut {
 
 export function useKeyboardShortcuts() {
   const navigate = useNavigate();
-  const { startNewConversationInstant } = useChatControls();
+  const { startNewConversationInstant } = useShallowSelector(
+    ChatContext,
+    (state) => ({
+      startNewConversationInstant: state.startNewConversationInstant,
+    })
+  );
+
   const { openSettings } = useSettings();
 
   const shortcuts: KeyboardShortcut[] = [

@@ -5,12 +5,6 @@ import { useCallback } from "react";
 import { ChatMessage } from "@/components/chat/chat-message";
 import { ChatInput } from "@/components/chat/chat-input";
 import { MessageSkeleton } from "@/components/chat/message-skeleton";
-import {
-  useChatMessages,
-  useChatConfig,
-  useChatControls,
-  useChatSessionStatus,
-} from "@/contexts/chat-context";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { useErrorAlert } from "@/hooks/use-error-alert";
 import { ErrorAlert } from "@/components/error-alert";
@@ -21,6 +15,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-Isomorphic-layout-effect";
 import { useNavigate } from "react-router-dom";
+import { useShallowSelector } from "react-shallow-store";
+import { ChatContext } from "@/contexts/chat-context";
 
 export default function ChatPage() {
   const { id = "" } = useParams<{ id: string }>();
@@ -28,22 +24,43 @@ export default function ChatPage() {
   const navigate = useNavigate();
   const state = open ? "expanded" : "collapsed";
 
-  const { messages, stop, reload, status, experimental_resume, addToolResult } =
-    useChatMessages();
-  const { selectedModel, setSelectedModel } = useChatConfig();
   const {
+    messages,
+    stop,
+    reload,
+    status,
+    experimental_resume,
+    addToolResult,
+    selectedModel,
+    setSelectedModel,
     isNewConversation,
     handleChatPageOnLoad,
     handleNewMessage,
     skipInitialChatLoadRef,
-  } = useChatControls();
-  const {
     isConversationLoading,
     isGuest,
     remainingMessages,
     totalMessages,
     maxMessages,
-  } = useChatSessionStatus();
+  } = useShallowSelector(ChatContext, (state) => ({
+    messages: state.messages,
+    stop: state.stop,
+    reload: state.reload,
+    status: state.status,
+    experimental_resume: state.experimental_resume,
+    addToolResult: state.addToolResult,
+    selectedModel: state.selectedModel,
+    setSelectedModel: state.setSelectedModel,
+    isNewConversation: state.isNewConversation,
+    handleChatPageOnLoad: state.handleChatPageOnLoad,
+    handleNewMessage: state.handleNewMessage,
+    skipInitialChatLoadRef: state.skipInitialChatLoadRef,
+    isConversationLoading: state.isConversationLoading,
+    isGuest: state.isGuest,
+    remainingMessages: state.remainingMessages,
+    totalMessages: state.totalMessages,
+    maxMessages: state.maxMessages,
+  }));
 
   const { messagesEndRef, lastMessageRef, temporarySpaceHeight } =
     useAutoScroll({
@@ -224,7 +241,7 @@ export default function ChatPage() {
       >
         <ErrorAlert
           className="mb-3"
-          isOpen={alertState.isOpen && status !== "error"}
+          isOpen={alertState.isOpen && status === "ready"}
           onClose={() => {
             hideAlert();
             navigate("/conversations");
